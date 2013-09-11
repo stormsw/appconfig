@@ -33,6 +33,26 @@ module AppConfigCLI
 				puts '=================================='				
 			end 
 			
+			desc "workers <filename>","List of registered workers"
+			method_option :group_by, :aliases=>'-g', :desc=>'Group by criteria: [assembly, registry, type]'
+			def workers(filename)
+			  @doc = readFile(filename)
+			  workers = @doc.xpath('/configuration/Workers/worker');
+			  puts "There is found #{workers.count} worker(s)." if options[:verbose]
+			  hash = Hash.new {|h,k|h[k]={}} 
+			  workers.each do |worker|
+			    stages = worker[:stages].split(',').uniq
+			    registries = worker[:registries].split(',').uniq
+			    assembly = worker[:assembly]
+			    type = worker[:type]
+			    stages.each do |stage|
+			      puts "Dupped stage #{stage}:\n\t\t#{worker.to_s}" if hash.keys.include?(stage)
+			      hash[stage] = {:assembly=>assembly, :registries => registries, :type=>type }			      
+  				end #end stages
+			  end
+			  puts hash.inspect
+			end
+			
 			desc "stages <filename> <transaction code> [options]", "List configured stages for <transaction code> from <filename>"
 			method_option :show_dups, :type => :boolean, :aliases=> '-d', :desc=>'Verbose output of XML block when given stage already parsed.'
 			method_option :show_editors, :type => :boolean, :aliases=> '-e', :desc=>'Print editors for each stage.'
