@@ -6,11 +6,12 @@ module AppConfigCLI
 		@doc=nil
 		public	
 			class_option :verbose, :type => :boolean, :default => false, :aliases=>'-v'
+			class_option :ignore_case, :type => :boolean, :default => true, :aliases=>'-i'
 			
 			desc "info", "Configuration Info from FileName."
 			def info(filename)
 				@doc = readFile(filename)
-				#wizards = doc.css("Wizards wizard")	#css selectors can be in use
+				#wizards = @doc.css("Wizards wizard")	#css selectors can be in use
 				wizards = @doc.xpath('//wizard') #xpath allowed aswell
 				puts "Found #{wizards.count}'s wizards sections document wide."
 
@@ -39,18 +40,53 @@ module AppConfigCLI
 			  @doc = readFile(filename)
 			  workers = @doc.xpath('/configuration/Workers/worker');
 			  puts "There is found #{workers.count} worker(s)." if options[:verbose]
-			  hash = Hash.new {|h,k|h[k]={}} 
+			  
+			  hashStages = Hash.new {|h,k|h[k]=0} 
+			  hashRegistries = Hash.new {|h,k|h[k]=0} 
+			  hashAssemblies = Hash.new {|h,k|h[k]=0} 
+			  hashTypes = Hash.new {|h,k|h[k]=0}
+			  
 			  workers.each do |worker|
 			    stages = worker[:stages].split(',').uniq
 			    registries = worker[:registries].split(',').uniq
 			    assembly = worker[:assembly]
 			    type = worker[:type]
-			    stages.each do |stage|
-			      puts "Dupped stage #{stage}:\n\t\t#{worker.to_s}" if hash.keys.include?(stage)
-			      hash[stage] = {:assembly=>assembly, :registries => registries, :type=>type }			      
+			    
+				stages.each do |stage|
+			      puts "Duplicated stage #{stage}:\n\t\t#{worker.to_s}" if (hashStages.keys.include?(stage)) && options[:verbose]
+			      hashStages[stage] +=1 #{:assembly=>assembly, :registries => registries, :type=>type }			      
   				end #end stages
+				
+				registries.each{|registry|
+					hashRegistries[registry]+=1
+				}
+				
+				hashAssemblies[assembly]+=1
+				hashTypes[type]+=1
 			  end
-			  puts hash.inspect
+
+			  puts "Declared registires: #{hashRegistries.count}"			  
+			  hashRegistries.each do |key,val|
+				puts "\t#{key}"
+			  end
+
+			  puts "Declared types: #{hashTypes.count}"
+			  hashTypes.each do |key,val|
+				puts "\t#{key}"
+			  end
+
+			  puts "Declared assemblies: #{hashAssemblies.count}"
+			  			  			  
+			  hashAssemblies.each do |key,val|
+				puts "\t#{key}"
+			  end
+ 
+			  puts "Declared stages: #{hashStages.count}"
+			  
+			  hashStages.each do |key,val|
+				puts "\t#{key}#{"\t<<Check count: #{val}" if val>1}"
+			  end
+			 
 			end
 			
 			desc "stages <filename> <transaction code> [options]", "List configured stages for <transaction code> from <filename>"
@@ -66,39 +102,30 @@ module AppConfigCLI
 					stages_transactions = Hash.new {|hash, key| hash[key] = []}
 					wizard_spec = wizards.css('wizard')
 					puts "Found #{wizard_spec.count}'s Wizards sections from root." if options[:verbose]
-					#cnt = 1
-					
+
 					wizard_spec.each do |wizard|						
-						#puts "Row start: #{cnt}"
 						stages = wizard[:stages].split(',');					
 						meta = wizard[:meta];
-						#puts "Analize meta=#{meta} with stages=#{wizard[:stages]}."					
-						puts "Analize err: \n #{wizard.to_s}." unless meta
-						
+						unless meta 
+							puts "Analize error: \n #{wizard.to_s}." if options[:verbose]
+							#raise "Incorrect meta section (null)"
+							next
+						end
 						skip = false;											
 						
 						stages.each do |stage|
 							if(stages_transactions.has_key?(stage))
-								if(meta.nil?)
-									puts "Analize err: \n #{wizard.to_s}."
-								end
-
-								raise Exception() unless meta 
 								if stageAccepatable(meta,trcode,nil) && (options[:show_dups]||options[:verbose])
 									puts "Warning! Stage #{stage} is redefined for #{trcode}"
 									puts ">>Details: #{wizard.to_s}"
 									puts "Wizard meta=#{meta} with stages=#{wizard[:stages]} skipped."
-								else
-								
 								end
 								skip = true;
 							end
-						end					
-						
+						end											
+
 						next if skip					
-						
-						raise Exception() unless meta
-						
+
 						if stageAccepatable(meta,trcode,nil)
 							editors = wizard.css('editor')
 							editors_names = []
@@ -107,16 +134,12 @@ module AppConfigCLI
 								editors_names<<clear_name
 							}
 							stages.each{|stage| stages_transactions[stage] = {:editors=>editors_names, :meta =>meta} }						
-						end					
-						#puts "Row end: #{cnt}"
-						#cnt+=1
-					end
-					
+						end
+					end					
 					puts "Configured stages for transaction #{trcode}:"
 					stages_transactions.each do |key, val| 
 						puts "\t\t#{key}"
-						puts "\t\t\tmeta: #{val[:meta]}" if options[:show_meta]
-						#val[:editors].each{|ed| puts "\t\t\t\t#{ed}"}
+						puts "\t\t\tmeta: #{val[:meta]}" if options[:show_meta]						
 						val[:editors].each{|ed| puts "\t\t\t\t#{ed}"} if options[:show_editors]
 					end
 				else
@@ -130,16 +153,22 @@ module AppConfigCLI
 				return 'all';
 			end
 			
+			# Check code against meta
+			# meta can be: all;all or all;<csv> or <(metacode)\d+>;<csv>
+			# when metacode is not "all" - need to compare with knownTransactionMeta
+			# returns true when <csv> contains code and knownMeta is nil or equal metacode
 			def stageAccepatable(meta,code,knownTransactionMeta=nil)
 				metacode,trlist = meta.split(';')
-				if(metacode=='all')  
-					return trlist.split(',').include?(code)
-				else 
-					if knownTransactionMeta					
-						return knownTransactionMeta.to_i==metacode.to_i
+				# currently this check in application is case insensitive				
+				accepted = trlist.split(',').any?{ |s| s.casecmp(code)==0 }# trlist.split(',').include?(code)
+				unless(metacode=='all')
+					if knownTransactionMeta
+						accepted &&= knownTransactionMeta.to_i==metacode.to_i
+					else
+						accepted = false
 					end
-				end
-				return false;				
+				end				
+				return accepted;				
 			end
 			
 			def readFile(fileName)
