@@ -8,7 +8,8 @@ module AppConfigCLI
 			class_option :verbose, :type => :boolean, :default => false, :aliases=>'-v'
 			#class_option :ignore_case, :type => :boolean, :default => true, :aliases=>'-i'
 			
-			desc "info", "Configuration Info from FileName."
+			desc "info <filename>", "Configuration Info from FileName."
+			#method_option :filename=>:required,:desc=>'Application config file'
 			def info(filename)
 				@doc = readFile(filename)
 				#wizards = @doc.css("Wizards wizard")	#css selectors can be in use
