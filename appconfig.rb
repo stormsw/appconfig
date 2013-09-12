@@ -1,5 +1,6 @@
 require 'nokogiri'
 require 'thor'
+require 'pp'
 
 module AppConfigCLI
 	class Appconfig < Thor		
@@ -33,6 +34,39 @@ module AppConfigCLI
 				}				
 				puts '=================================='				
 			end 
+			
+			desc "normalize <filename>", "Split workers by single transaction and stage"
+			def normalize(filename)
+				@doc = readFile(filename)
+				wizards = @doc.xpath('/configuration/Wizards/wizard');
+				puts "There is found #{wizards.count} wizard(s)." if options[:verbose]
+				tr_codes = Hash.new{|k,v|k[v]=[]}
+				transaction_stages = Hash.new{|k,v|k[v]=[]}
+				
+				wizards.each do |wizard|
+					stages_csv = wizard[:stages]
+					stages = stages_csv.split(',').uniq
+					assembly = wizard[:assembly]
+					m_code,tr_csv = wizard[:meta].split(';')
+					trlist = tr_csv.split(',').uniq
+					trlist.each do |code|
+						unless tr_codes[code] && tr_codes[code].any?{|item| item[:assembly]==assembly && item[:code]==m_code}
+							tr_codes[code]<<{:assembly=>assembly, :code=>m_code}
+						end
+						stages.each do |stage|						
+							unless transaction_stages[code].include?(stage)
+								#check acceptance
+								
+							end
+						end
+					end
+				end
+				#puts tr_codes.inspect
+				pp tr_codes
+				known_tr = tr_codes.keys.count
+				--known_tr if tr_codes.keys.include?('all')
+				puts "Known transaction codes: #{known_tr}" if options[:verbose]
+			end
 			
 			desc "workers <filename>","List of registered workers"
 			method_option :group_by, :aliases=>'-g', :desc=>'Group by criteria: [assembly, registry, type]'
