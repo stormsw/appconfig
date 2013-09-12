@@ -1,10 +1,14 @@
 require 'nokogiri'
 require 'thor'
+require 'digest/sha1'
 require 'pp'
 
 module AppConfigCLI
 	class Appconfig < Thor		
 		@doc=nil
+		@transactionMetaData = Hash.new
+		@@tr_meta_path = 'data/ugmn/transactions.metadata'
+		
 		public	
 			class_option :verbose, :type => :boolean, :default => false, :aliases=>'-v'
 			class_option :ignore_case, :type => :boolean, :default => true, :aliases=>'-i'
@@ -42,6 +46,9 @@ module AppConfigCLI
 				puts "There is found #{wizards.count} wizard(s)." if options[:verbose]
 				tr_codes = Hash.new{|k,v|k[v]=[]}
 				transaction_stages = Hash.new{|k,v|k[v]=[]}
+				editorsBigHash = Hash.new
+				
+				loadMetaData
 				
 				wizards.each do |wizard|
 					stages_csv = wizard[:stages]
@@ -49,14 +56,41 @@ module AppConfigCLI
 					assembly = wizard[:assembly]
 					m_code,tr_csv = wizard[:meta].split(';')
 					trlist = tr_csv.split(',').uniq
+					lefttr = trlist.sort
+					
 					trlist.each do |code|
+						#collect described transaction codes
 						unless tr_codes[code] && tr_codes[code].any?{|item| item[:assembly]==assembly && item[:code]==m_code}
 							tr_codes[code]<<{:assembly=>assembly, :code=>m_code}
 						end
-						stages.each do |stage|						
+						
+						stages.each do |stage|
+							#if there were such stage, wizard will be skipped by app
 							unless transaction_stages[code].include?(stage)
 								#check acceptance
-								
+								if wizardMetaAccepatable(wizard[:meta],code,getTransactionMetaCode(code))
+									transaction_stages[code] <<stage
+									if lefttr.count>1
+										#normalizer should remove all found codes and processed stages
+										#trlist.reject{|item| item==code}.join(',')
+										new_wizard = wizard.dup(1)
+										lefttr.delete(code)
+										wizard[:meta] = "#{m_code};#{lefttr.join(',')}"
+										
+										leftstages = wizard[:stages].split(',').uniq
+										leftstages.delete(code) if leftstages.count>1
+										
+										new_wizard[:meta] = "#{m_code};#{code}"
+										new_wizard[:stages] = stage
+										editors = new_wizard.css('editor')
+										key = Digest::SHA1.base64digest(editors.to_xml)
+										#editorsBigHash[key]=editors										
+										wizard.before(new_wizard)
+									end
+								end
+							else #in this case transaction should be removed from wizard meta description
+								lefttr.delete(code)
+								wizard[:meta] = "#{m_code};#{lefttr.join(',')}"
 							end
 						end
 					end
@@ -66,6 +100,7 @@ module AppConfigCLI
 				known_tr = tr_codes.keys.count
 				--known_tr if tr_codes.keys.include?('all')
 				puts "Known transaction codes: #{known_tr}" if options[:verbose]
+				writeFile(filename+".xml")
 			end
 			
 			desc "workers <filename>","List of registered workers"
@@ -149,7 +184,7 @@ module AppConfigCLI
 						
 						stages.each do |stage|
 							if(stages_transactions.has_key?(stage))
-								if stageAccepatable(meta,trcode,nil) && (options[:show_dups]||options[:verbose])
+								if wizardMetaAccepatable(meta,trcode,nil) && (options[:show_dups]||options[:verbose])
 									puts "Warning! Stage #{stage} is redefined for #{trcode}"
 									puts ">>Details: #{wizard.to_s}"
 									puts "Wizard meta=#{meta} with stages=#{wizard[:stages]} skipped."
@@ -160,7 +195,7 @@ module AppConfigCLI
 
 						next if skip					
 
-						if stageAccepatable(meta,trcode,nil)
+						if wizardMetaAccepatable(meta,trcode,nil)
 							editors = wizard.css('editor')
 							editors_names = []
 							editors.each {|editor|
@@ -182,16 +217,26 @@ module AppConfigCLI
 			end
 		
 		private
+			def loadMetaData()
+				puts "Load: #{@@tr_meta_path}"
+				@transactionMetaData = Hash.new
+				File.open(@@tr_meta_path).each do |record|
+					record.sub!(/#.+$/,'')					
+					code,m_code = record.scan(/\w+/) if record
+					@transactionMetaData[code]=m_code
+				end
+			end
 			
 			def getTransactionMetaCode(code)
-				return 'all';
+				@transactionMetaData[code]
 			end
 			
 			# Check code against meta
 			# meta can be: all;all or all;<csv> or <(metacode)\d+>;<csv>
 			# when metacode is not "all" - need to compare with knownTransactionMeta
 			# returns true when <csv> contains code and knownMeta is nil or equal metacode
-			def stageAccepatable(meta,code,knownTransactionMeta=nil)
+			def wizardMetaAccepatable(meta,code,knownTransactionMeta=nil)
+				#puts "Meta: "+meta
 				metacode,trlist = meta.split(';')
 				# currently this check in application is case insensitive				
 				accepted = trlist.split(',').any?{ |s| s.casecmp(code)==0 }# trlist.split(',').include?(code)
