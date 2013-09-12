@@ -205,6 +205,29 @@ module AppConfigCLI
 				return accepted;				
 			end
 			
+			def writeFile(fileName)
+			  # SaveOptions
+				# AS_BUILDER: Save builder created document
+				# AS_HTML: Save as HTML
+				# AS_XHTML: Save as XHTML
+				# AS_XML: Save as XML
+				# DEFAULT_HTML: the default for HTML document
+				# DEFAULT_XHTML: the default for XHTML document
+				# DEFAULT_XML: the default for XML documents
+				# FORMAT: Format serialized xml
+				# NO_DECLARATION: Do not include declarations
+				# NO_EMPTY_TAGS: Do not include empty tags
+				# NO_XHTML: Do not save XHTML
+				# e.g. node.write_to(io, :encoding => 'UTF-8', :indent => 2)
+				f = File.open(fileName,"w")
+				@doc.write_xml_to(f, :encoding => 'UTF-8', :indent => 2
+				#, :save_with => FORMAT | AS_XML
+				)
+				f.close
+				puts "Check:#{fileName}"
+				#File.open("out_" + filename, 'w') {|f| f.write(@doc.to_xml) }
+			end
+			
 			def readFile(fileName)
 				doc = Nokogiri::XML(File.open(fileName)) do |config|
 				# NOBLANKS - Remove blank nodes
