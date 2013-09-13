@@ -278,11 +278,11 @@ module AppConfigCLI
 			
 			def readFile(fileName)
 				doc = Nokogiri::XML(File.open(fileName)) do |config|
-				# NOBLANKS - Remove blank nodes
-				# NOENT - Substitute entities
-				# NOERROR - Suppress error reports
-				# STRICT - Strict parsing; raise an error when parsing malformed documents
-				# NONET - Prevent any network connections during parsing. Recommended for parsing untrusted documents.
+					# NOBLANKS - Remove blank nodes
+					# NOENT - Substitute entities
+					# NOERROR - Suppress error reports
+					# STRICT - Strict parsing; raise an error when parsing malformed documents
+					# NONET - Prevent any network connections during parsing. Recommended for parsing untrusted documents.
 				  config.strict.nonet
 				end
 				return doc

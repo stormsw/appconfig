@@ -1,2 +1,11 @@
 .project
 data/ugmn/app.config.xml
+data/MultiStageSingleTransaction.config
+bin/appconfig
+data/DupStagesSingleTransaction.config
+data/DupStagesSingleTransaction.config.xml
+data/MultiStageSingleTransaction.config.xml
+data/SingleStageMultiTransaction.config
+data/SingleStageMultiTransaction.config.xml
+*.tmp
+data/lrns/App.config.xml
