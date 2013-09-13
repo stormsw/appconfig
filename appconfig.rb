@@ -46,10 +46,8 @@ module AppConfigCLI
 				puts "There is found #{wizards.count} wizard(s)." if options[:verbose]
 				tr_codes = Hash.new{|k,v|k[v]=[]}
 				transaction_stages = Hash.new{|k,v|k[v]=[]}
-				editorsBigHash = Hash.new
-				
-				loadMetaData
-				
+				#editorsBigHash = Hash.new				
+				#loadMetaData				
 				wizards.each do |wizard|
 					stages_csv = wizard[:stages]
 					stages = stages_csv.split(',').uniq
@@ -58,41 +56,32 @@ module AppConfigCLI
 					trlist = tr_csv.split(',').uniq
 					lefttr = trlist.sort
 					
-					trlist.each do |code|
-						#collect described transaction codes
-						unless tr_codes[code] && tr_codes[code].any?{|item| item[:assembly]==assembly && item[:code]==m_code}
-							tr_codes[code]<<{:assembly=>assembly, :code=>m_code}
-						end
-						
-						stages.each do |stage|
-							#if there were such stage, wizard will be skipped by app
-							unless transaction_stages[code].include?(stage)
-								#check acceptance
-								if wizardMetaAccepatable(wizard[:meta],code,getTransactionMetaCode(code))
+					if (trlist.count>1) ||(stages.count>1) #otherwise it already optimized
+						normalized = []
+						trlist.each do |code|
+							#collect described transaction codes
+							unless tr_codes[code] && tr_codes[code].any?{|item| item[:assembly]==assembly && item[:code]==m_code}
+								tr_codes[code]<<{:assembly=>assembly, :code=>m_code}
+							end							
+							stages.each do |stage|
+								#if there were such stage, wizard will be skipped by app
+								unless transaction_stages[code].include?(stage)
+									#we will not modify there, validation check should be done separately
+									#if wizardMetaAccepatable(wizard[:meta],code,getTransactionMetaCode(code))
 									transaction_stages[code] <<stage
-									if lefttr.count>1
-										#normalizer should remove all found codes and processed stages
-										#trlist.reject{|item| item==code}.join(',')
-										new_wizard = wizard.dup(1)
-										lefttr.delete(code)
-										wizard[:meta] = "#{m_code};#{lefttr.join(',')}"
-										
-										leftstages = wizard[:stages].split(',').uniq
-										leftstages.delete(code) if leftstages.count>1
-										
-										new_wizard[:meta] = "#{m_code};#{code}"
-										new_wizard[:stages] = stage
-										editors = new_wizard.css('editor')
-										key = Digest::SHA1.base64digest(editors.to_xml)
-										#editorsBigHash[key]=editors										
-										wizard.before(new_wizard)
-									end
+									#normalizer should remove all found codes and processed stages									
+									new_wizard = wizard.dup(1)
+									new_wizard[:meta] = "#{m_code};#{code}"
+									new_wizard[:stages] = stage									
+									#editors = new_wizard.css('editor')
+									#key = Digest::SHA1.base64digest(editors.to_xml)
+									#editorsBigHash[key]=editors									
+									normalized<<new_wizard
 								end
-							else #in this case transaction should be removed from wizard meta description
-								lefttr.delete(code)
-								wizard[:meta] = "#{m_code};#{lefttr.join(',')}"
 							end
 						end
+						normalized.each{|item|wizard.before(item)}
+						wizard.remove
 					end
 				end
 				#puts tr_codes.inspect
@@ -265,9 +254,9 @@ module AppConfigCLI
 				# NO_XHTML: Do not save XHTML
 				# e.g. node.write_to(io, :encoding => 'UTF-8', :indent => 2)
 				f = File.open(fileName,"w")
-				@doc.write_xml_to(f, :encoding => 'UTF-8', :indent => 2
+				#.to_xml(:save_with => Nokogiri::XML::Node::SaveOptions::AS_XML | Nokogiri::XML::Node::SaveOptions::NO_DECLARATION).strip
 				#, :save_with => FORMAT | AS_XML
-				)
+				@doc.write_xml_to(f,:encoding => 'UTF-8',:indent_text =>' ',:indent => 2,:save_with =>Nokogiri::XML::Node::SaveOptions::AS_XML)
 				f.close
 				puts "Check:#{fileName}"
 				#File.open("out_" + filename, 'w') {|f| f.write(@doc.to_xml) }
