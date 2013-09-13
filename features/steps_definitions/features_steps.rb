@@ -48,7 +48,7 @@ Then(/^"(.*?)" contains (\d+) wizards with transaction in "(.*?)"$/) do |filenam
 				end
 	wizards = doc.xpath('//wizard')
 	wizards.count.should==wcount.to_i
-	wizards.each{|w|stages<<w[:stages]}
+	#wizards.each{|w|stages<<w[:stages]}
 	wnames.split(',').each do |name| 
 		wizards.any? { |w| w[:meta].split(';')[1]==name}.should==true		
 	end
