@@ -37,7 +37,15 @@ Options:
   -v, [--verbose]       
 ```
 
+#### Normalize stages
+This option will put separate wizard configuration for each transaction
 
+Each wizard contains _assembly_, _stages_ and _meta_ attributes.
+Attribute _stages_ may contains <csv:stage>.
+Attribute _meta_ consists of 2 part separated by ';'. <metacode>;<csv:transactionCode>
+The <metacode> follows (all|\d+) regex rule [i.e "all" or number].The <csv:transactionCode> can be (all|([\S]+[\S\d]*[,]*)+) regex [i.e. all or alpha-digital coma-separated words] 
+If transaction type fits this (meta=<metacode> or <metcode> is 'all') then it will check transaction code against the list of <csv:transactionCode>
+When it matches (ignore-case) to some element value we assumes that stage suits us.
 
 
 # MD format how-to

@@ -11,9 +11,9 @@ module AppConfigCLI
 		
 		public	
 			class_option :verbose, :type => :boolean, :default => false, :aliases=>'-v'
-			class_option :ignore_case, :type => :boolean, :default => true, :aliases=>'-i'
+			#class_option :ignore_case, :type => :boolean, :default => true, :aliases=>'-i'
 			
-			desc "info", "Configuration Info from FileName."
+			desc "info <filename>", "Configuration Info from FileName."
 			def info(filename)
 				@doc = readFile(filename)
 				#wizards = @doc.css("Wizards wizard")	#css selectors can be in use
@@ -109,42 +109,56 @@ module AppConfigCLI
 			    registries = worker[:registries].split(',').uniq
 			    assembly = worker[:assembly]
 			    type = worker[:type]
-			    
-				stages.each do |stage|
-			      puts "Duplicated stage #{stage}:\n\t\t#{worker.to_s}" if (hashStages.keys.include?(stage)) && options[:verbose]
-			      hashStages[stage] +=1 #{:assembly=>assembly, :registries => registries, :type=>type }			      
-  				end #end stages
-				
-				registries.each{|registry|
-					hashRegistries[registry]+=1
-				}
-				
-				hashAssemblies[assembly]+=1
-				hashTypes[type]+=1
+  				
+  				stages.each do |stage|
+  			      puts "Duplicated stage #{stage}:\n\t\t#{worker.to_s}" if (hashStages.keys.include?(stage)) && options[:verbose]
+  			      hashStages[stage] +=1 #{:assembly=>assembly, :registries => registries, :type=>type }			      
+    			end #end stages
+  				registries.each{|registry| hashRegistries[registry]+=1}				
+  				hashAssemblies[assembly]+=1
+  				hashTypes[type]+=1
 			  end
 
 			  puts "Declared registires: #{hashRegistries.count}"			  
 			  hashRegistries.each do |key,val|
-				puts "\t#{key}"
+				  puts "\t#{key}"
 			  end
 
 			  puts "Declared types: #{hashTypes.count}"
 			  hashTypes.each do |key,val|
-				puts "\t#{key}"
+				  puts "\t#{key}"
 			  end
 
-			  puts "Declared assemblies: #{hashAssemblies.count}"
-			  			  			  
+			  puts "Declared assemblies: #{hashAssemblies.count}"			  			  
 			  hashAssemblies.each do |key,val|
-				puts "\t#{key}"
+				  puts "\t#{key}"
 			  end
- 
-			  puts "Declared stages: #{hashStages.count}"
-			  
-			  hashStages.each do |key,val|
-				puts "\t#{key}#{"\t<<Check count: #{val}" if val>1}"
-			  end
-			 
+ 			  
+			  if options[:group_by]
+			    puts "\tStages by #{options[:group_by]}"
+			   hashGroup = Hash.new {|h,k| h[k]=[]}
+			   group_key = nil
+			   case options[:group_by].to_sym
+  				when :assembly
+  					group_key = :assembly
+  				when :registry
+  				  group_key = :registries
+  				when :type
+  				  group_key =:type
+  				else
+  				  raise "Wrong group criteria specified: #{options[:group_by]}"
+  			 end
+				 workers.each{|worker| hashGroup[worker[group_key]]+=worker[:stages].split(',')} if group_key
+				 hashGroup.each do |key,val|
+           puts "\t[#{key}]" 
+           val.sort.each{|stage| puts "\t\t#{stage}"}            
+         end
+				else
+          puts "Declared stages: #{hashStages.count}"
+          hashStages.each do |key,val|
+            puts "\t#{key}#{"\t<<Check count: #{val}" if val>1}"
+          end
+				end			 
 			end
 			
 			desc "stages <filename> <transaction code> [options]", "List configured stages for <transaction code> from <filename>"
