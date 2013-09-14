@@ -4,14 +4,27 @@ require 'aruba/api'
 #require 'aruba/reporting'
 #World(Aruba::Api)
 
+if ENV['os']
+  @@platform=:windows
+else
+  @@platform=:linux #or mac :D
+end
+
 Given(/^I have "(.*?)" in data:$/) do |filename,xml|
-	@filename = "data/"+filename
+	@filename = "tmp/"+filename
 	#STDERR.puts string  
 	File.open(@filename, 'w') {|f| f.write(xml) }
 end
 
 When(/^I normalize "(.*?)"$/) do |filename|
-  cmd = 'appconfig.cmd normalize data/'+filename
+  case @@platform
+  when :windows
+    cmd = 'appconfig.cmd normalize tmp/'+filename  
+  when :linux
+    cmd = 'appconfig normalize tmp/'+filename
+  else
+    raise "Unknown platform, barely know what to do there?!"
+  end
   run_simple(unescape(cmd))
   assert_exit_status(0)
 end

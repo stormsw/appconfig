@@ -2,8 +2,9 @@ require 'nokogiri'
 require 'thor'
 require 'digest/sha1'
 require 'pp'
+require "appconfig/version"
 
-module AppConfigCLI
+module Appconfig
 	class Appconfig < Thor		
 		@doc=nil
 		@transactionMetaData = Hash.new
@@ -218,7 +219,30 @@ module AppConfigCLI
 					puts "ERROR: invalid config file. Wizards section not found"
 				end
 			end
-		
+	
+      def initialize(argv, stdin=STDIN, stdout=STDOUT, stderr=STDERR, kernel=Kernel)
+        @argv, @stdin, @stdout, @stderr, @kernel = argv, stdin, stdout, stderr, kernel
+        super(argv)
+      end
+      
+    no_commands do      
+      def execute!
+        # your code here, assign a value to exitstatus         
+        #exitstatus = 
+        Appconfig.start(@argv)
+        #method(:start).call ARGV
+          #0
+         #invoke('start',ARGV)
+          #self.start(@argv)
+          #Appconfig::Appconfig.start(@argv)
+          #Appconfig::Appconfig.start(ARGV)
+        #@kernel.exit(exitstatus)
+      end
+      #remove_command :execute!
+      def this_is_not_a_command
+      end
+    end
+    
 		private
 			def loadMetaData()
 				puts "Load: #{@@tr_meta_path}"
@@ -289,5 +313,5 @@ module AppConfigCLI
 			end
 	end
 end
-
-AppConfigCLI::Appconfig.start(ARGV)
+#debug
+#Appconfig::Appconfig.start(ARGV)
