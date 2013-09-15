@@ -1,3 +1,5 @@
+require 'simplecov'
+SimpleCov.start
 #$DEBUG = true
 require 'aruba'
 require 'aruba/in_process'

@@ -22,10 +22,11 @@ Gem::Specification.new do |spec|
   spec.add_dependency 'thor'
   spec.add_dependency 'nokogiri'
 
-  spec.add_development_dependency "bundler", "~> 1.3"
+  spec.add_development_dependency 'bundler', '~> 1.3'
   spec.add_development_dependency "rake"
                                                                             #gem 'rack'
   spec.add_development_dependency 'rspec' #, :require => 'spec'
   spec.add_development_dependency 'cucumber'
-  spec.add_development_dependency 'aruba', "~> 0.5.3"
+  spec.add_development_dependency 'aruba', '~> 0.5.3'
+  spec.add_development_dependency 'simplecov', '~> 0.7.1'
 end
