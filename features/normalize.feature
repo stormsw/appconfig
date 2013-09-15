@@ -105,3 +105,33 @@ Feature: Normalize stages
     When I normalize "DupAllStageSingleTransaction.config"
     Then "DupAllStageSingleTransaction.config.xml" produced in data:
     And "DupAllStageSingleTransaction.config.xml" contains 2 wizards with transaction in "BLDT,all"
+
+  Scenario: Skip wizard with meta-type dependent ALL transaction meta
+  Wizards for same transaction may have several records with same stage, but transaction meta may be specified
+  Stage appeared to be matched if it contains "all" for transaction code but meta should be equal to skip
+    Given I have "SpecialMetaAllStageSingleTransaction.config" in data:
+    """
+			<?xml version="1.0"?>
+
+			<configuration>
+				<Wizards>
+					<wizard stages="LodgmentApplication" assembly="WAssess"  meta="7;all">
+						<editor name="transaction" type="LRS.Client.Assess.TransactionListPage,WAssess" help="28"/>
+						<editor name="applicant" type="LRS.Client.Assess.ApplicantsPage,WAssess" help="191"/>
+						<editor name="properties" type="LRS.Client.Assess.PropertiesPage,WAssess" help="136" mainForm="PropertyFormNonMandatoryApproximate" plotForm="PlotFormNonMandatory" unitForm="UnitFormNonMandatory" buildingForm="BuildingFormNonMandatory" />
+						<editor name="barcode" type="LRS.Client.Assess.PageBarcode,WAssess" help="165"/>
+						<editor name="complete" type="LRS.Core.CompletePage,LRS.Data.Controls" help="30"/>
+					</wizard>
+					<wizard stages="Intake,LodgmentApplication" assembly="WAssess"  meta="all;BLDT">
+						<editor name="transaction" type="LRS.Client.Assess.TransactionListPage,WAssess" help="28"/>
+						<editor name="applicant" type="LRS.Client.Assess.ApplicantsPage,WAssess" help="191"/>
+						<editor name="properties" type="LRS.Client.Assess.PropertiesPage,WAssess" help="136" mainForm="PropertyFormNonMandatoryApproximate" plotForm="PlotFormNonMandatory" unitForm="UnitFormNonMandatory" buildingForm="BuildingFormNonMandatory" />
+						<editor name="barcode" type="LRS.Client.Assess.PageBarcode,WAssess" help="165"/>
+						<editor name="complete" type="LRS.Core.CompletePage,LRS.Data.Controls" help="30"/>
+					</wizard>
+				</Wizards>
+			</configuration>
+			"""
+    When I normalize "SpecialMetaAllStageSingleTransaction.config"
+    Then "SpecialMetaAllStageSingleTransaction.xml" produced in data:
+    And "SpecialMetaAllStageSingleTransaction.xml" contains 3 wizards with transaction in "BLDT,all"

@@ -65,6 +65,8 @@ module Appconfig
               tr_codes[code]<<{:assembly => assembly, :code => m_code}
             end
             stages.each do |stage|
+              # TODO transaction stages should help with specialized meta codes
+              fixed_meta_key = "#{m_code};#{code}"
               #if there were such stage, wizard will be skipped by app
               skipped_by_all = transaction_stages['all'].include?(stage) && code!='all'
               if skipped_by_all && options[:verbose]
@@ -90,6 +92,7 @@ module Appconfig
         else
           code = wizard_transactions.at(0)
           stage = stages.at(0)
+          #fixed_meta_key = "#{m_code};#{code}"
           transaction_stages[code]<<stage
         end
       end
