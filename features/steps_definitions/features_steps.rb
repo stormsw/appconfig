@@ -4,12 +4,6 @@ require 'aruba/api'
 #require 'aruba/reporting'
 #World(Aruba::Api)
 
-if ENV['os']
-  @@platform=:windows
-else
-  @@platform=:linux #or mac :D
-end
-
 Given(/^I have "(.*?)" in data:$/) do |filename,xml|
 	@filename = "tmp/"+filename
 	#STDERR.puts string  
@@ -17,11 +11,12 @@ Given(/^I have "(.*?)" in data:$/) do |filename,xml|
 end
 
 When(/^I normalize "(.*?)"$/) do |filename|
-  case @@platform
+  #aruba makes current working dir tmp/aruba...
+  case platform
   when :windows
-    cmd = 'appconfig.cmd normalize tmp/'+filename  
+    cmd = 'appconfig.cmd normalize ../'+filename  
   when :linux
-    cmd = 'appconfig normalize tmp/'+filename
+    cmd = 'appconfig normalize ../'+filename
   else
     raise "Unknown platform, barely know what to do there?!"
   end
@@ -30,12 +25,13 @@ When(/^I normalize "(.*?)"$/) do |filename|
 end
 
 Then(/^"(.*?)" produced in data:$/) do |filename|
-	filename = "data/"+filename
+  STDERR.puts "<<<<"+Dir.pwd
+	filename = "tmp/"+filename
 	File.file?(filename).should == true
 end
 
 Then(/^"(.*?)" contains (\d+) wizards with stage in "(.*?)"$/) do |filename,wcount,wnames|
-	doc = Nokogiri::XML(File.open('data/'+filename)) do |config|
+	doc = Nokogiri::XML(File.open('tmp/'+filename)) do |config|
 					# NOBLANKS - Remove blank nodes
 					# NOENT - Substitute entities
 					# NOERROR - Suppress error reports
@@ -51,7 +47,7 @@ Then(/^"(.*?)" contains (\d+) wizards with stage in "(.*?)"$/) do |filename,wcou
 end
 
 Then(/^"(.*?)" contains (\d+) wizards with transaction in "(.*?)"$/) do |filename,wcount,wnames|
-	doc = Nokogiri::XML(File.open('data/'+filename)) do |config|
+	doc = Nokogiri::XML(File.open('tmp/'+filename)) do |config|
 					# NOBLANKS - Remove blank nodes
 					# NOENT - Substitute entities
 					# NOERROR - Suppress error reports

@@ -12,8 +12,7 @@ module Appconfig
 		
 		public	
 			class_option :verbose, :type => :boolean, :default => false, :aliases=>'-v'
-			#class_option :ignore_case, :type => :boolean, :default => true, :aliases=>'-i'
-			
+			#class_option :ignore_case, :type => :boolean, :default => true, :aliases=>'-i'			
 			desc "info <filename>", "Configuration Info from FileName."
 			def info(filename)
 				@doc = readFile(filename)
@@ -83,6 +82,10 @@ module Appconfig
 						end
 						normalized.each{|item|wizard.before(item)}
 						wizard.remove
+					else
+					  code = trlist.at(0)
+					  stage = stages.at(0)
+					  transaction_stages[code]<<stage
 					end
 				end
 				#puts tr_codes.inspect
@@ -223,6 +226,7 @@ module Appconfig
       def initialize(argv, stdin=STDIN, stdout=STDOUT, stderr=STDERR, kernel=Kernel)
         @argv, @stdin, @stdout, @stderr, @kernel = argv, stdin, stdout, stderr, kernel
         super(argv)
+        #STDERR.puts Dir.pwd
       end
       
     no_commands do      
@@ -230,6 +234,9 @@ module Appconfig
         # your code here, assign a value to exitstatus         
         #exitstatus = 
         Appconfig.start(@argv)
+        
+        #????Appconfig.new(@argv).invoke
+        
         #method(:start).call ARGV
           #0
          #invoke('start',ARGV)
