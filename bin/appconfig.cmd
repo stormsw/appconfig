@@ -1,8 +1,8 @@
 @ECHO OFF
-cd /d %~dp0
-cd ..
+Set appdir=%~dp0
 IF NOT "%~f0" == "~f0" GOTO :WinNT
-@ruby ./lib/appconfig.rb %1 %2 %3 %4 %5 %6 %7 %8 %9
+@ruby "%appdir%appconfig" %1 %2 %3 %4 %5 %6 %7 %8 %9
 GOTO :EOF
 :WinNT
-@ruby appconfig.rb %*
+@ruby "%appdir%appconfig" %*
+popd
