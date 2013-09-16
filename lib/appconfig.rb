@@ -15,7 +15,6 @@ module Appconfig
     public
 
     desc "info <filename>", "Configuration Info from FileName."
-
     def info(filename)
       @doc = read_file(filename)
       #wizards = @doc.css("Wizards wizard")	#css selectors can be in use
@@ -40,13 +39,12 @@ module Appconfig
     end
 
     desc "normalize <filename>", "Split workers by single transaction and stage"
-
     def normalize(filename)
       @doc = read_file(filename)
       wizards = @doc.xpath('/configuration/Wizards/wizard')
       puts "There is found #{wizards.count} wizard(s)." if options[:verbose]
       tr_codes = Hash.new { |k, v| k[v]=[] }
-      transaction_stages = Hash.new { |k, v| k[v]=[] }
+	  transaction_meta = Hash.new
       #editorsBigHash = Hash.new
       #load_meta_data
       wizards.each do |wizard|
@@ -55,7 +53,9 @@ module Appconfig
         assembly = wizard[:assembly]
         m_code, tr_csv = wizard[:meta].split(';')
         wizard_transactions = tr_csv.split(',').uniq
-        #lefttr = wizard_transactions.sort
+		# should help with specialized meta codes
+		transaction_meta[m_code]||=Hash.new { |k, v| k[v]=[] }
+		transaction_stages=transaction_meta[m_code]
 
         if (wizard_transactions.count>1) ||(stages.count>1) #otherwise it already optimized
           normalized = []
@@ -65,8 +65,6 @@ module Appconfig
               tr_codes[code]<<{:assembly => assembly, :code => m_code}
             end
             stages.each do |stage|
-              # TODO transaction stages should help with specialized meta codes
-              fixed_meta_key = "#{m_code};#{code}"
               #if there were such stage, wizard will be skipped by app
               skipped_by_all = transaction_stages['all'].include?(stage) && code!='all'
               if skipped_by_all && options[:verbose]
@@ -92,7 +90,6 @@ module Appconfig
         else
           code = wizard_transactions.at(0)
           stage = stages.at(0)
-          #fixed_meta_key = "#{m_code};#{code}"
           transaction_stages[code]<<stage
         end
       end
@@ -101,11 +98,11 @@ module Appconfig
       --known_tr if tr_codes.keys.include?('all')
       puts "Known transaction codes: #{known_tr}" if options[:verbose]
       write_file(filename+".xml")
+	  exit(0)
     end
 
     desc "workers <filename>", "List of registered workers"
     method_option :group_by, :aliases => '-g', :desc => 'Group by criteria: [assembly, registry, type]'
-
     def workers(filename)
       @doc = read_file(filename)
       workers = @doc.xpath('/configuration/Workers/worker')
@@ -177,7 +174,6 @@ module Appconfig
     method_option :show_dups, :type => :boolean, :aliases => '-d', :desc => 'Verbose output of XML block when given stage already parsed.'
     method_option :show_editors, :type => :boolean, :aliases => '-e', :desc => 'Print editors for each stage.'
     method_option :show_meta, :type => :boolean, :aliases => '-m', :desc => 'Print wizard configuration meta.'
-
     def stages(filename, transaction_code)
       @doc = read_file(filename)
       wizards = @doc.xpath('/configuration/Wizards')
@@ -231,19 +227,28 @@ module Appconfig
         raise "ERROR: invalid config file. Wizards section not found"
       end
     end
-
-    def initialize(argv, stdin=STDIN, stdout=STDOUT, stderr=STDERR, kernel=Kernel)
-      @argv, @stdin, @stdout, @stderr, @kernel = argv, stdin, stdout, stderr, kernel
-      super(argv)
+		
+	#this requires only for aruba in process testing... and it breaks thor default constructor
+    #def initialize(argv, stdin=STDIN, stdout=STDOUT, stderr=STDERR, kernel=Kernel)
+    #  @argv, @stdin, @stdout, @stderr, @kernel = argv, stdin, stdout, stderr, kernel
+	  #STDERR.puts self.class.class_options
+	  #puts self.class.methods
+	  #super(@argv,[self.class.class_options,self.class.method_options].flatern)
       #STDERR.puts Dir.pwd
-    end
+    #end
 
     no_commands do
       def execute!
         # your code here, assign a value to exitstatus         
         #exitstatus =
         #Appconfig.start(ARGV)
-        self.class.start(@argv)
+        self.class.start(ARGV)
+		#(@argv)
+		#   script = MyScript.new(args, options, config)
+		#   script.invoke(:command, first_arg, second_arg, third_arg)
+		#args = @argv.dup
+		#command = args.shift!.to_sym
+		#invoke(command, args)
         #@kernel.exit(exitstatus)
       end
     end

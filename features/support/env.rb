@@ -1,3 +1,4 @@
+#require 'ruby-debug'
 require 'simplecov'
 SimpleCov.start
 #$DEBUG = true
@@ -11,8 +12,8 @@ require 'appconfig'
 #TODO remove when done
 #require 'debuger'
 #World(Test::Unit::Assertions)
-Aruba::InProcess.main_class = Appconfig::Appconfig
-Aruba.process = Aruba::InProcess
+#Aruba::InProcess.main_class = Appconfig::Appconfig
+#Aruba.process = Aruba::InProcess
 
 def platform
   if ENV['os']

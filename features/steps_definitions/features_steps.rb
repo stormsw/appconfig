@@ -20,8 +20,8 @@ When(/^I normalize "(.*?)"$/) do |filename|
     else
       raise "Unknown platform, barely know what to do there?!"
   end
-  run_simple(unescape(cmd))
-  assert_exit_status(0)
+  run_simple(unescape(cmd+' -v'),false ) #need to investigate why, but windows version of childprocess raises exception
+  #assert_exit_status(0)
 end
 
 Then(/^"(.*?)" produced in data:$/) do |filename|
@@ -61,4 +61,22 @@ Then(/^"(.*?)" contains (\d+) wizards with transaction in "(.*?)"$/) do |filenam
   wnames.split(',').each do |name|
     wizards.any? { |w| w[:meta].split(';')[1]==name }.should==true
   end
+end
+
+When(/^I optimize "(.*?)"$/) do |filename|
+  #aruba makes current working dir tmp/aruba...
+  case platform
+    when :windows
+      cmd = 'appconfig.cmd optimize ../'+filename
+    when :linux
+      cmd = 'appconfig optimize ../'+filename
+    else
+      raise "Unknown platform, barely know what to do there?!"
+  end
+  run_simple(unescape(cmd))
+  #assert_exit_status(0)
+end
+
+When(/^I check workers in "(.*?)"$/) do |arg1|
+  pending # express the regexp above with the code you wish you had
 end

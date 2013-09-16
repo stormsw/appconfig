@@ -133,5 +133,5 @@ Feature: Normalize stages
 			</configuration>
 			"""
     When I normalize "SpecialMetaAllStageSingleTransaction.config"
-    Then "SpecialMetaAllStageSingleTransaction.xml" produced in data:
-    And "SpecialMetaAllStageSingleTransaction.xml" contains 3 wizards with transaction in "BLDT,all"
+    Then "SpecialMetaAllStageSingleTransaction.config.xml" produced in data:
+    And "SpecialMetaAllStageSingleTransaction.config.xml" contains 3 wizards with transaction in "BLDT,all"

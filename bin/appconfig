@@ -3,3 +3,4 @@ lib_dir = File.expand_path('../../lib', __FILE__)
 $LOAD_PATH << lib_dir unless $LOAD_PATH.include?(lib_dir)
 require 'appconfig'
 Appconfig::Appconfig.new(ARGV.dup).execute!
+#Appconfig::Appconfig.start(ARGV.dup)
