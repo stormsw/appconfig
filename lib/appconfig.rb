@@ -39,6 +39,7 @@ module Appconfig
     end
 
     desc "normalize <filename>", "Split workers by single transaction and stage"
+	method_option :sort, :aliases => '-s', :desc => 'Sort by stage,transaction code'
     def normalize(filename)
       @doc = read_file(filename)
       wizards = @doc.xpath('/configuration/Wizards/wizard')

@@ -135,3 +135,23 @@ Feature: Normalize stages
     When I normalize "SpecialMetaAllStageSingleTransaction.config"
     Then "SpecialMetaAllStageSingleTransaction.config.xml" produced in data:
     And "SpecialMetaAllStageSingleTransaction.config.xml" contains 3 wizards with transaction in "BLDT,all"
+
+	Scenario: Sorting of wizards by stages and transaction codes
+    Given I have "NormalizeAndSort.config" in data:
+    """
+			<?xml version="1.0"?>
+
+			<configuration>
+				<Wizards>
+					<wizard stages="A,D" assembly="WAssess"  meta="all;T1,T3">
+						<editor name="1" type="2" help="28"/>
+					</wizard>
+					<wizard stages="B,C" assembly="WAssess"  meta="all;T4,T2">
+						<editor name="1" type="2" help="28"/>
+					</wizard>
+				</Wizards>
+			</configuration>
+	"""
+	When I normalize with sorting "NormalizeAndSort.config"
+    Then "NormalizeAndSort.config.xml" produced in data:
+    And "NormalizeAndSort.config.xml" contains 4 wizards with stage order "A,B,C,D" and code order "T1,T2,T3,T4"
