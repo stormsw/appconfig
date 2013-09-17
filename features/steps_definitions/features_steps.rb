@@ -20,7 +20,7 @@ When(/^I normalize "(.*?)"$/) do |filename|
     else
       raise "Unknown platform, barely know what to do there?!"
   end
-  run_simple(unescape(cmd+' -v'),false ) #need to investigate why, but windows version of childprocess raises exception
+  run_simple(unescape(cmd),false ) #need to investigate why, but windows version of childprocess raises exception
   #assert_exit_status(0)
 end
 
@@ -73,11 +73,61 @@ When(/^I optimize "(.*?)"$/) do |filename|
     else
       raise "Unknown platform, barely know what to do there?!"
   end
-  run_simple(unescape(cmd))
   run_simple(unescape(cmd),false) #windows version fails 
   #assert_exit_status(0)
 end
 
-When(/^I check workers in "(.*?)"$/) do |arg1|
+When(/^I check workers in "(.*?)"$/) do |filename|
   pending # express the regexp above with the code you wish you had
+end
+
+When(/^I normalize with sorting "(.*?)"$/) do |filename|
+  case platform
+    when :windows
+      cmd = "appconfig.cmd normalize ../#{filename} -s"
+    when :linux
+      cmd = "appconfig normalize ../#{filename} -s"
+    else
+      raise "Unknown platform, barely know what to do there?!"
+  end
+  run_simple(unescape(cmd),false )
+end
+
+Then(/^"(.*?)" contains (\d+) wizards with stage order "(.*?)" and code order "(.*?)"$/) do |filename, wcount, wstages, wcodes|
+  doc = Nokogiri::XML(File.open('tmp/'+filename)) do |config|
+  # NOBLANKS - Remove blank nodes
+  # NOENT - Substitute entities
+  # NOERROR - Suppress error reports
+  # STRICT - Strict parsing; raise an error when parsing malformed documents
+  # NONET - Prevent any network connections during parsing. Recommended for parsing untrusted documents.
+	config.strict.nonet
+  end
+  wizards = doc.xpath('//wizard')
+  wizards.count.should==wcount.to_i
+  stages=[]
+  codes=[]
+  wizards.each do |w| 
+	stages<<w[:stages]
+	codes<<w[:meta].split(';')[1]
+  end
+  stages.join(',').should==wstages
+  codes.join(',').should==wcodes
+end
+
+Then(/^"(.*?)" contains (\d+) wizards with stages="(.*?)" and meta="(.*?)"$/) do |filename, wcount, wstages, wcodes|
+  doc = Nokogiri::XML(File.open('tmp/'+filename)) do |config|
+  # NOBLANKS - Remove blank nodes
+  # NOENT - Substitute entities
+  # NOERROR - Suppress error reports
+  # STRICT - Strict parsing; raise an error when parsing malformed documents
+  # NONET - Prevent any network connections during parsing. Recommended for parsing untrusted documents.
+	config.strict.nonet
+  end
+  wizards = doc.xpath('//wizard')
+  wizards.count.should==wcount.to_i
+  #stages,codes=[]
+  wizards.each do |w|  
+	w[:stages].should==wstages
+	w[:meta].should==wcodes
+  end
 end

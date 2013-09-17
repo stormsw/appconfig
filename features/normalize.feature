@@ -154,4 +154,4 @@ Feature: Normalize stages
 	"""
 	When I normalize with sorting "NormalizeAndSort.config"
     Then "NormalizeAndSort.config.xml" produced in data:
-    And "NormalizeAndSort.config.xml" contains 4 wizards with stage order "A,B,C,D" and code order "T1,T2,T3,T4"
+    And "NormalizeAndSort.config.xml" contains 8 wizards with stage order "A,B,C,D" and code order "T1,T2,T3,T4"
