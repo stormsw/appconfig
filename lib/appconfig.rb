@@ -331,10 +331,9 @@ module Appconfig
     # when metacode is not "all" - need to compare with knownTransactionMeta
     # returns true when <csv> contains code and knownMeta is nil or equal metacode
     def wizard_meta_acceptable(meta, code, known_meta=nil)
-      #puts "Meta: "+meta
       meta_code, tr_list = meta.split(';')
       # currently this check in application is case insensitive
-      accepted = tr_list.split(',').any? { |s| s.casecmp(code)==0 } # tr_list.split(',').include?(code)
+      accepted = tr_list=='all'|| tr_list.split(',').any? { |s| s.casecmp(code)==0 } # tr_list.split(',').include?(code)
       unless meta_code=='all'
         if known_meta
           accepted &&= known_meta.to_i==meta_code.to_i
@@ -342,6 +341,7 @@ module Appconfig
           accepted = false
         end
       end
+	  return accepted
     end
 
     def write_file(filename)
