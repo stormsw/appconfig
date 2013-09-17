@@ -38,6 +38,59 @@ module Appconfig
       puts '=================================='
     end
 
+	desc "optimize <filename>", "Merge workers by same editors for transaction and stage"
+    def optimize(filename)
+      @doc = read_file(filename)
+      wizards = @doc.xpath('/configuration/Wizards/wizard')
+      puts "There is found #{wizards.count} wizard(s)." if options[:verbose]
+	  transaction_meta = Hash.new
+	  editors_cache_stat = Hash.new { |k, v| k[v]=0}
+	  editors_cache = Hash.new { |k, v| k[v]={}}
+	  wizards.each do |wizard|
+        stages_csv = wizard[:stages]
+        stages = stages_csv.split(',').uniq
+        assembly = wizard[:assembly]
+        m_code, tr_csv = wizard[:meta].split(';')
+        wizard_transactions = tr_csv.split(',').uniq
+		# should help with specialized meta codes
+		transaction_meta[m_code]||=Hash.new { |k, v| k[v]=[] }
+		transaction_stages=transaction_meta[m_code]		
+		editors = wizard.css('editor')
+		key = Digest::SHA1.base64digest(editors.to_xml)
+		editors_cache_stat[key]+=1
+		if editors_cache.keys.include?(key)
+			parent = editors_cache[key][:wizard]
+			parent_stages = parent[:stages]
+			parent_meta = parent[:meta]
+			parent_assembly = parent[:assembly]
+			parent_m_code, parent_tr_csv = parent_meta.split(';')
+			if (parent_m_code==m_code||parent_m_code=='all') && parent_assembly==assembly
+				new_stages=(parent_stages.split(',')+stages).uniq.join(',')
+				new_trlist = (parent_tr_csv.split(',')+wizard_transactions).uniq.join(',')
+				new_meta = "#{parent_m_code};#{new_trlist}"
+				parent[:stages]=new_stages
+				parent[:meta] = new_meta
+				wizard.remove
+			else
+			end
+		else
+			editors_cache[key]={:stat=>1,:xml=>editors,:wizard=>wizard}
+		end
+	  end
+	  
+	  uq_ed=0
+	  editors_cache_stat.each do |k,v|
+		if v>1
+		 puts "\t#{v}\tKey: #{k}"
+		else
+		 uq_ed +=1
+		end
+	  end
+		puts "Unique sets: #{uq_ed}" if uq_ed		
+      write_file(filename+".xml")
+	  exit(0)
+    end
+	
     desc "normalize <filename>", "Split workers by single transaction and stage"
 	method_option :sort, :aliases => '-s', :desc => 'Sort by stage,transaction code'
     def normalize(filename)
@@ -94,6 +147,7 @@ module Appconfig
           transaction_stages[code]<<stage
         end
       end
+	  sort_wizards(wizards)
       #pp tr_codes
       known_tr = tr_codes.keys.count
       --known_tr if tr_codes.keys.include?('all')
@@ -324,6 +378,14 @@ module Appconfig
         config.strict.nonet
       end
     end
+	
+	def sort_wizards(doc)
+		parent = nil
+		sorted_docs = []
+		doc.each do |w|
+		end
+		
+	end
   end
 end
 

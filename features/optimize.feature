@@ -4,7 +4,9 @@ Feature: Optimize stages
   But wizard order should matter
 
   Scenario: Merge wizard stages for each transaction code
-  Wizard stages may be specified as csv list, we need to split it on separate wizard definition
+  Wizards with same transaction code but different stages having equivalent set of editors should be merged into single wizard description
+  Having stages specified as csv
+
     Given I have "OptSingleStageSingleTransaction.config" in data:
     """
 			<?xml version="1.0"?>
@@ -30,5 +32,5 @@ Feature: Optimize stages
 			"""
     When I optimize "OptSingleStageSingleTransaction.config"
     Then "OptSingleStageSingleTransaction.config.xml" produced in data:
-    And "OptSingleStageSingleTransaction.config.xml" contains 1 wizards with stage in "New,Intake"
+    And "OptSingleStageSingleTransaction.config.xml" contains 1 wizards with stages="New,Intake" and meta="all;BLDT"
 

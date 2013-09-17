@@ -1,4 +1,5 @@
 #require 'ruby-debug'
+#covearage report requires run task inprocess, but this way wont works parameters passing...
 require 'simplecov'
 SimpleCov.start
 #$DEBUG = true

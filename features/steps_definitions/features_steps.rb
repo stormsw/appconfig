@@ -74,6 +74,7 @@ When(/^I optimize "(.*?)"$/) do |filename|
       raise "Unknown platform, barely know what to do there?!"
   end
   run_simple(unescape(cmd))
+  run_simple(unescape(cmd),false) #windows version fails 
   #assert_exit_status(0)
 end
 
