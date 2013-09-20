@@ -1,7 +1,7 @@
 ; @author Alexander Varchenko
 ; HM NIS Edit Wizard helper defines
 !define PRODUCT_NAME "LRS AppConfig"
-!define PRODUCT_VERSION "0.0.4"
+!define PRODUCT_VERSION "0.0.5"
 !define PRODUCT_PUBLISHER "Alexander Varchenko"
 !define PRODUCT_WEB_SITE "http://gitnisga/appconfig"
 !define PRODUCT_DIR_REGKEY "Software\Microsoft\Windows\CurrentVersion\App Paths\lrs-tools"
@@ -151,7 +151,8 @@ Function LaunchRE
                    InstallDirectory: $INSTDIR "
   #ExecShell "" "$INSTDIR\rubyinstaller-1.9.3-p448.EXE"
   ExecWait '"$INSTDIR\railsinstaller-2.2.1.exe"' $0
-  ExecShell "" "$INSTDIR\setbundles.cmd"
+  #ExecShell "" "$INSTDIR\setbundles.cmd"
+  Exec 'cmd /k "$INSTDIR\setbundles.cmd"'
   #ExecWait '"$INSTDIR\dotNetFx45_Full_setup.exe"' $0
 FunctionEnd
 

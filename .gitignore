@@ -20,3 +20,4 @@ tmp
 text.txt
 install/setup-lrstools-winx64.exe
 Gemfile.lock
+*.exe
