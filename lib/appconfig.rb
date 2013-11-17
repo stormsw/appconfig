@@ -14,7 +14,8 @@ module Appconfig
 
     public
 
-    desc "info <filename>", "Configuration Info from FileName."
+    desc 'info <filename>', 'Configuration Info from FileName.'
+
     def info(filename)
       @doc = read_file(filename)
       #wizards = @doc.css("Wizards wizard")	#css selectors can be in use
@@ -38,96 +39,109 @@ module Appconfig
       puts '=================================='
     end
 
-	desc "optimize <filename>", "Merge workers by same editors for transaction and stage"
+    desc 'optimize <filename>', "Merge workers by same editors for transaction and stage"
+
     def optimize(filename)
       @doc = read_file(filename)
       wizards = @doc.xpath('/configuration/Wizards/wizard')
       puts "There is found #{wizards.count} wizard(s)." if options[:verbose]
-	  transaction_meta = Hash.new
-	  editors_cache_stat = Hash.new { |k, v| k[v]=0}
-	  editors_cache = Hash.new { |k, v| k[v]={}}
-	  wizards.each do |wizard|
-        stages_csv = wizard[:stages]
-        stages = stages_csv.split(',').uniq
-        assembly = wizard[:assembly]
-        m_code, tr_csv = wizard[:meta].split(';')
-        wizard_transactions = tr_csv.split(',').uniq
-		# should help with specialized meta codes
-		transaction_meta[m_code]||=Hash.new { |k, v| k[v]=[] }
-		transaction_stages=transaction_meta[m_code]		
-		editors = wizard.css('editor')
-		key = Digest::SHA1.base64digest(editors.to_xml)
-		editors_cache_stat[key]+=1
-		if editors_cache.keys.include?(key)
-			parent = editors_cache[key][:wizard]
-			parent_stages = parent[:stages]
-			parent_meta = parent[:meta]
-			parent_assembly = parent[:assembly]
-			parent_m_code, parent_tr_csv = parent_meta.split(';')
-			if (parent_m_code==m_code||parent_m_code=='all') && parent_assembly==assembly
-				new_stages=(parent_stages.split(',')+stages).uniq.join(',')
-				new_trlist = (parent_tr_csv.split(',')+wizard_transactions).uniq.join(',')
-				new_meta = "#{parent_m_code};#{new_trlist}"
-				parent[:stages]=new_stages
-				parent[:meta] = new_meta
-				wizard.remove
-			else
-			end
-		else
-			editors_cache[key]={:stat=>1,:xml=>editors,:wizard=>wizard}
-		end
-	  end
-	  
-	  uq_ed=0
-	  editors_cache_stat.each do |k,v|
-		if v>1
-		 puts "\t#{v}\tKey: #{k}"
-		else
-		 uq_ed +=1
-		end
-	  end
-		puts "Unique sets: #{uq_ed}" if uq_ed		
-      write_file(filename+".xml")
-	  exit(0)
-    end
-	
-    desc "normalize <filename>", "Split workers by single transaction and stage"
-	method_option :sort, :aliases => '-s', :desc => 'Sort by stage,transaction code'
-    def normalize(filename)
-      @doc = read_file(filename)
-      wizards = @doc.xpath('/configuration/Wizards/wizard')
-      puts "There is found #{wizards.count} wizard(s)." if options[:verbose]
-      tr_codes = Hash.new { |k, v| k[v]=[] }
-	  transaction_meta = Hash.new
-      #editorsBigHash = Hash.new
-      #load_meta_data
+      transaction_meta = Hash.new
+      editors_cache_stat = Hash.new { |k, v| k[v]=0 }
+      editors_cache = Hash.new { |k, v| k[v]={} }
       wizards.each do |wizard|
         stages_csv = wizard[:stages]
         stages = stages_csv.split(',').uniq
         assembly = wizard[:assembly]
         m_code, tr_csv = wizard[:meta].split(';')
         wizard_transactions = tr_csv.split(',').uniq
-		# should help with specialized meta codes
-		transaction_meta[m_code]||=Hash.new { |k, v| k[v]=[] }
-		transaction_stages=transaction_meta[m_code]
+        # should help with specialized meta codes
+        transaction_meta[m_code]||=Hash.new { |k, v| k[v]=[] }
+        #transaction_stages=transaction_meta[m_code]
+        editors = wizard.css('editor')
+        key = Digest::SHA1.base64digest(editors.to_xml)
+        editors_cache_stat[key]+=1
+        if editors_cache.keys.include?(key)
+          parent = editors_cache[key][:wizard]
+          parent_stages = parent[:stages]
+          parent_meta = parent[:meta]
+          parent_assembly = parent[:assembly]
+          parent_m_code, parent_tr_csv = parent_meta.split(';')
+          if (parent_m_code==m_code||parent_m_code=='all') && parent_assembly==assembly
+            new_stages=(parent_stages.split(',')+stages).uniq.join(',')
+            new_trlist = (parent_tr_csv.split(',')+wizard_transactions).uniq.join(',')
+            new_meta = "#{parent_m_code};#{new_trlist}"
+            parent[:stages]=new_stages
+            parent[:meta] = new_meta
+            wizard.remove
+          else
+          end
+        else
+          editors_cache[key]={:stat => 1, :xml => editors, :wizard => wizard}
+        end
+      end
+
+      uq_ed=0
+      editors_cache_stat.each do |k, v|
+        if v>1
+          puts "\t#{v}\tKey: #{k}"
+        else
+          uq_ed +=1
+        end
+      end
+      puts "Unique sets: #{uq_ed}" if uq_ed
+      write_file(filename+".xml")
+      #exit(0)
+    end
+
+    desc "normalize <filename>", "Split workers by single transaction and stage"
+    method_option :sort, :aliases => '-s', :desc => 'Sort by stage,transaction code'
+
+    def normalize(filename)
+      @doc = read_file(filename)
+      wizards = @doc.xpath('/configuration/Wizards/wizard')
+      puts "There is found #{wizards.count} wizard(s)." if options[:verbose]
+      known_transaction_codes = Hash.new { |k, v| k[v]=[] }
+      transaction_meta = Hash.new
+      transaction_stages=Hash.new { |k, v| k[v]=[] }
+
+      #editorsBigHash = Hash.new
+      #load_meta_data
+
+      wizards.each do |wizard|
+        stages_csv = wizard[:stages]
+        stages = stages_csv.split(',').uniq
+        assembly = wizard[:assembly]
+        m_code, tr_csv = wizard[:meta].split(';')
+        wizard_transactions = tr_csv.split(',').uniq
+
+        # should help with specialized meta codes
+        transaction_meta[m_code]||=Hash.new { |k, v| k[v]=[] }
+        #transaction_stages=transaction_meta[m_code]
 
         if (wizard_transactions.count>1) ||(stages.count>1) #otherwise it already optimized
           normalized = []
+          puts "Wizard transactions[#{tr_csv}, meta[#{m_code}]" if options[:verbose]
           wizard_transactions.each do |code|
             #collect described transaction codes
-            unless tr_codes[code] && tr_codes[code].any? { |item| item[:assembly]==assembly && item[:code]==m_code }
-              tr_codes[code]<<{:assembly => assembly, :code => m_code}
+            unless known_transaction_codes[code] && known_transaction_codes[code].any? { |item| item[:assembly]==assembly && item[:code]==m_code }
+              known_transaction_codes[code]<<{:assembly => assembly, :code => m_code}
+              puts "Added #{code} to known..." if options[:verbose]
             end
+
             stages.each do |stage|
+              puts "working out stage #{stage}" if options[:verbose]
               #if there were such stage, wizard will be skipped by app
               skipped_by_all = transaction_stages['all'].include?(stage) && code!='all'
               if skipped_by_all && options[:verbose]
                 puts "Warning: override stage #{stage} for transaction #{code} by previous 'all'."
               end
+              pp transaction_stages if options[:verbose]
               unless transaction_stages[code].include?(stage)||skipped_by_all
+                transaction_stages[code]<<stage
+                puts "new wiard!" if options[:verbose]
                 #we will not modify there, validation check should be done separately
                 #if wizardMetaAccepatable(wizard[:meta],code,getTransactionMetaCode(code))
-                transaction_stages[code] <<stage
+                transaction_stages[code]<<stage
                 #normalizer should remove all found codes and processed stages
                 new_wizard = wizard.dup(1)
                 new_wizard[:meta] = "#{m_code};#{code}"
@@ -145,19 +159,24 @@ module Appconfig
           code = wizard_transactions.at(0)
           stage = stages.at(0)
           transaction_stages[code]<<stage
+          puts "Optimal -> transaction[#{code}].stage[#{stage}]" if options[:verbose]
         end
       end
-	  sort_wizards(wizards)
+
+      #wizard = @doc.xpath('/configuration/Wizards')
+      #wizard<<sort_wizards(wizards)
+      #sort_wizards(wizards)
       #pp tr_codes
-      known_tr = tr_codes.keys.count
-      --known_tr if tr_codes.keys.include?('all')
+      known_tr = known_transaction_codes.keys.count
+      --known_tr if known_transaction_codes.keys.include?('all')
       puts "Known transaction codes: #{known_tr}" if options[:verbose]
       write_file(filename+".xml")
-	  exit(0)
+      #exit(0)
     end
 
     desc "workers <filename>", "List of registered workers"
     method_option :group_by, :aliases => '-g', :desc => 'Group by criteria: [assembly, registry, type]'
+
     def workers(filename)
       @doc = read_file(filename)
       workers = @doc.xpath('/configuration/Workers/worker')
@@ -229,6 +248,7 @@ module Appconfig
     method_option :show_dups, :type => :boolean, :aliases => '-d', :desc => 'Verbose output of XML block when given stage already parsed.'
     method_option :show_editors, :type => :boolean, :aliases => '-e', :desc => 'Print editors for each stage.'
     method_option :show_meta, :type => :boolean, :aliases => '-m', :desc => 'Print wizard configuration meta.'
+
     def stages(filename, transaction_code)
       @doc = read_file(filename)
       wizards = @doc.xpath('/configuration/Wizards')
@@ -282,46 +302,8 @@ module Appconfig
         raise "ERROR: invalid config file. Wizards section not found"
       end
     end
-		
-	#this requires only for aruba in process testing... and it breaks thor default constructor
-    #def initialize(argv, stdin=STDIN, stdout=STDOUT, stderr=STDERR, kernel=Kernel)
-    #  @argv, @stdin, @stdout, @stderr, @kernel = argv, stdin, stdout, stderr, kernel
-	  #STDERR.puts self.class.class_options
-	  #puts self.class.methods
-	  #super(@argv,[self.class.class_options,self.class.method_options].flatern)
-      #STDERR.puts Dir.pwd
-    #end
-
-    no_commands do
-      def execute!
-        # your code here, assign a value to exitstatus         
-        #exitstatus =
-        #Appconfig.start(ARGV)
-        self.class.start(ARGV)
-		#(@argv)
-		#   script = MyScript.new(args, options, config)
-		#   script.invoke(:command, first_arg, second_arg, third_arg)
-		#args = @argv.dup
-		#command = args.shift!.to_sym
-		#invoke(command, args)
-        #@kernel.exit(exitstatus)
-      end
-    end
 
     private
-=begin
-      #TODO refactor to validator
-			def load_meta_data
-        puts "Load: #{@@tr_meta_path}"
-				@transaction_meta_data = Hash.new
-				File.open(@@tr_meta_path).each do |record|
-					record.sub!(/#.+$/,'')					
-					code,m_code = record.scan(/\w+/) if record
-					@transaction_meta_data[code]=m_code  if code
-				end
-			end
-
-=end
     def get_transaction_meta_code(code)
       @transaction_meta_data[code]
     end
@@ -341,7 +323,7 @@ module Appconfig
           accepted = false
         end
       end
-	  return accepted
+      return accepted
     end
 
     def write_file(filename)
@@ -377,16 +359,78 @@ module Appconfig
         # NONET - Prevent any network connections during parsing. Recommended for parsing untrusted documents.
         config.strict.nonet
       end
+      return doc
     end
-	
-	def sort_wizards(doc)
-		parent = nil
-		sorted_docs = []
-		doc.each do |w|
-		end
-		
-	end
+
+    def wizard_to_hash(wizard)
+      stages_csv = wizard[:stages].split(',').sort.uniq.join(',')
+      assembly = wizard[:assembly]
+      m_code, tr_csv = wizard[:meta].split(';')
+      tr_csv = tr_csv.split(',').sort.uniq.join(',')
+      return {:stages => stages_csv, :assembly => assembly, :meta_code => m_code, :transaction => tr_csv}
+    end
+
+    # return -1 if a<b |0 if q==b|1 if a>b
+    def compare_wizards(a_wizard, b_wizard)
+      a = wizard_to_hash(a_wizard)
+      b = wizard_to_hash(b_wizard)
+      #stages csv gives max  (all=MIN)
+      return -1 if (a[:stages] == "all" && b[:stages]!="all")
+      return 1 if (a[:stages] != "all" && b[:stages]=="all")
+      stc = a[:stages].to_s <=> b[:stages].to_s
+      return stc if stc!=0
+
+      #m_code next (all=MIN)
+      return -1 if (a[:meta_code] == "all" && b[:meta_code]!="all")
+      return 1 if (a[:meta_code] != "all" && b[:meta_code]=="all")
+      stc = a[:meta_code].to_i <=> b[:meta_code].to_i
+      return stc if stc!=0
+
+      #tr_csv
+      return -1 if (a[:transaction] == "all" && b[:transaction]!="all")
+      return 1 if (a[:transaction] != "all" && b[:transaction]=="all")
+      stc = a[:transaction].to_s <=> b[:transaction].to_s
+      return stc if stc!=0
+
+      #assembly?
+      return a[:assembly].to_s <=> b[:assembly].to_s
+    end
+
+    #def quicksort(items)
+    #  if not items or items == [] then
+    #    []
+    #  else
+    #    x, *xs = items
+    #    quicksort(xs.select { |i| i <  x }) + [x] + quicksort(xs.select { |i| i >= x })
+    #  end
+    #end
+
+    #@param doc [Nokogiri::XML::NodeSet]
+    def sort_wizards(doc)
+      if doc.count>0
+        doc.remove
+        #$stderr.puts ccparent.class
+        nodes = doc.sort { |a_node, b_node|
+          compare_wizards(a_node, b_node)
+        }.each { |node| node.unlink }
+        #doc.each{ |node| node.remove}
+        nodes.each { |node| doc << node }
+      end
+
+    end
   end
+
+  class AppconfigRunner
+
+    def initialize(argv, stdin=STDIN, stdout=STDOUT, stderr=STDERR, kernel=Kernel)
+      @argv, @stdin, @stdout, @stderr, @kernel = argv, stdin, stdout, stderr, kernel
+    end
+
+    def execute!
+      Appconfig.start(@argv.dup)
+    end
+  end
+
 end
 
 #Appconfig::Appconfig.start(ARGV)
