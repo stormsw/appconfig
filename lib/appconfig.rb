@@ -39,7 +39,7 @@ module Appconfig
       puts '=================================='
     end
 
-    desc 'optimize <filename>', "Merge workers by same editors for transaction and stage"
+    desc 'optimize <filename>', 'Merge workers by same editors for transaction and stage'
 
     def optimize(filename)
       @doc = read_file(filename)
@@ -117,56 +117,25 @@ module Appconfig
         # should help with specialized meta codes
         transaction_meta[m_code]||=Hash.new { |k, v| k[v]=[] }
         #transaction_stages=transaction_meta[m_code]
-
+        normalized = []
         if (wizard_transactions.count>1) ||(stages.count>1) #otherwise it already optimized
-          normalized = []
           puts "Wizard transactions[#{tr_csv}, meta[#{m_code}]" if options[:verbose]
           wizard_transactions.each do |code|
             #collect described transaction codes
-            unless known_transaction_codes[code] && known_transaction_codes[code].any? { |item| item[:assembly]==assembly && item[:code]==m_code }
-              known_transaction_codes[code]<<{:assembly => assembly, :code => m_code}
-              puts "Added #{code} to known..." if options[:verbose]
-            end
-
-            stages.each do |stage|
-              puts "working out stage #{stage}" if options[:verbose]
-              #if there were such stage, wizard will be skipped by app
-              skipped_by_all = transaction_stages['all'].include?(stage) && code!='all'
-              if skipped_by_all && options[:verbose]
-                puts "Warning: override stage #{stage} for transaction #{code} by previous 'all'."
-              end
-              pp transaction_stages if options[:verbose]
-              unless transaction_stages[code].include?(stage)||skipped_by_all
-                transaction_stages[code]<<stage
-                puts "new wiard!" if options[:verbose]
-                #we will not modify there, validation check should be done separately
-                #if wizardMetaAccepatable(wizard[:meta],code,getTransactionMetaCode(code))
-                transaction_stages[code]<<stage
-                #normalizer should remove all found codes and processed stages
-                new_wizard = wizard.dup(1)
-                new_wizard[:meta] = "#{m_code};#{code}"
-                new_wizard[:stages] = stage
-                #editors = new_wizard.css('editor')
-                #key = Digest::SHA1.base64digest(editors.to_xml)
-                #editorsBigHash[key]=editors
-                normalized<<new_wizard
-              end
-            end
+            normalizer_process_transactions(assembly, code, known_transaction_codes, m_code, normalized, stages, transaction_stages, wizard)
           end
-          normalized.each { |item| wizard.before(item) }
-          wizard.remove
         else
+          normalized<<wizard.dup
           code = wizard_transactions.at(0)
           stage = stages.at(0)
           transaction_stages[code]<<stage
           puts "Optimal -> transaction[#{code}].stage[#{stage}]" if options[:verbose]
         end
+        normalized.each { |item| wizard.before(item) }
+        wizard.remove
       end
 
-      #wizard = @doc.xpath('/configuration/Wizards')
-      #wizard<<sort_wizards(wizards)
-      #sort_wizards(wizards)
-      #pp tr_codes
+      sort_wizards(wizards)
       known_tr = known_transaction_codes.keys.count
       --known_tr if known_transaction_codes.keys.include?('all')
       puts "Known transaction codes: #{known_tr}" if options[:verbose]
@@ -308,10 +277,68 @@ module Appconfig
       @transaction_meta_data[code]
     end
 
+    # @param [String] assembly
+    # @param [String] code
+    # @param [Hash] known_transaction_codes
+    # @param [String] meta_type_code
+    # @param [Nokogiri::XML::NodeSet] normalized
+    # @param [Array] wizard_stages
+    # @param [Hash] transaction_stages
+    # @param [Nokogiri::XML::Node] wizard
+    def normalizer_process_transactions(assembly, code, known_transaction_codes, meta_type_code, normalized, wizard_stages, transaction_stages, wizard)
+      unless known_transaction_codes[code] && known_transaction_codes[code].any? { |item| item[:assembly]==assembly && item[:code]==meta_type_code }
+        known_transaction_codes[code]<<{:assembly => assembly, :code => meta_type_code}
+        puts "Added #{code} to known..." if options[:verbose]
+      end
+
+      wizard_stages.each do |stage|
+        normalizer_process_stages(code, meta_type_code, normalized, stage, transaction_stages, wizard)
+      end
+    end
+
+    # @param [String] trans_code
+    # @param [String] meta_type_code
+    # @param [Nokogiri::XML::NodeSet] normalized
+    # @param [String] stage
+    # @param [Hash] transaction_stages
+    # @param [Nokogiri::XML::Node] wizard
+    def normalizer_process_stages( trans_code, meta_type_code, normalized, stage, transaction_stages, wizard)
+      puts "working out stage #{stage}" if options[:verbose]
+
+      #'all' as transaction code matches any transaction to this stage
+      # So,if there were such stage, wizard will be skipped by app
+      skipped_by_all = transaction_stages['all'].include?(stage) && trans_code!='all'
+      if skipped_by_all && options[:verbose]
+        puts "Warning: override stage #{stage} for transaction #{trans_code} by previous 'all'."
+      end
+
+      pp transaction_stages if options[:verbose]
+
+      unless transaction_stages[trans_code].include?(stage)||skipped_by_all
+        transaction_stages[trans_code]<<stage
+
+        puts "new wizard!" if options[:verbose]
+
+        #we will not modify there, validation check should be done separately
+        #if wizardMetaAccepatable(wizard[:meta],code,getTransactionMetaCode(code))
+
+        #normalizer should remove all found codes and processed stages
+        new_wizard = wizard.dup()
+        new_wizard[:meta] = "#{meta_type_code};#{trans_code}"
+        new_wizard[:stages] = stage
+
+        #editors = new_wizard.css('editor')
+        #key = Digest::SHA1.base64digest(editors.to_xml)
+        #editorsBigHash[key]=editors
+
+        normalized<<new_wizard
+      end
+    end
+
     # Check code against meta
-    # meta can be: all;all or all;<csv> or <(metacode)\d+>;<csv>
-    # when metacode is not "all" - need to compare with knownTransactionMeta
-    # returns true when <csv> contains code and knownMeta is nil or equal metacode
+    # meta can be: all;all or all;<csv> or <(meta-code)\d+>;<csv>
+    # when meta-code is not "all" - need to compare with knownTransactionMeta
+    # returns true when <csv> contains code and knownMeta is nil or equal meta-code
     def wizard_meta_acceptable(meta, code, known_meta=nil)
       meta_code, tr_list = meta.split(';')
       # currently this check in application is case insensitive
@@ -357,20 +384,23 @@ module Appconfig
         # NOERROR - Suppress error reports
         # STRICT - Strict parsing; raise an error when parsing malformed documents
         # NONET - Prevent any network connections during parsing. Recommended for parsing untrusted documents.
-        config.strict.nonet
+        config.strict.noblanks.nonet
       end
       return doc
     end
 
+    #@param wizard [Nokogiri::XML::Node]
     def wizard_to_hash(wizard)
       stages_csv = wizard[:stages].split(',').sort.uniq.join(',')
       assembly = wizard[:assembly]
-      m_code, tr_csv = wizard[:meta].split(';')
+      meta_code, tr_csv = wizard[:meta].split(';')
       tr_csv = tr_csv.split(',').sort.uniq.join(',')
-      return {:stages => stages_csv, :assembly => assembly, :meta_code => m_code, :transaction => tr_csv}
+      return {:stages => stages_csv, :assembly => assembly, :meta_code => meta_code, :transaction => tr_csv}
     end
 
-    # return -1 if a<b |0 if q==b|1 if a>b
+    # return -1 if a<b |0 if a==b|1 if a>b
+    #@param a_wizard [Nokogiri::XML::Node]
+    #@param b_wizard [Nokogiri::XML::Node]
     def compare_wizards(a_wizard, b_wizard)
       a = wizard_to_hash(a_wizard)
       b = wizard_to_hash(b_wizard)
@@ -396,24 +426,16 @@ module Appconfig
       return a[:assembly].to_s <=> b[:assembly].to_s
     end
 
-    #def quicksort(items)
-    #  if not items or items == [] then
-    #    []
-    #  else
-    #    x, *xs = items
-    #    quicksort(xs.select { |i| i <  x }) + [x] + quicksort(xs.select { |i| i >= x })
-    #  end
-    #end
-
     #@param doc [Nokogiri::XML::NodeSet]
     def sort_wizards(doc)
+
       if doc.count>0
-        doc.remove
-        #$stderr.puts ccparent.class
-        nodes = doc.sort { |a_node, b_node|
-          compare_wizards(a_node, b_node)
-        }.each { |node| node.unlink }
-        #doc.each{ |node| node.remove}
+        #doc.remove #unlink from document
+
+        nodes = doc.sort { |a_node, b_node| compare_wizards(a_node, b_node) }.each do |node|
+          node.unlink
+        end
+
         nodes.each { |node| doc << node }
       end
 
