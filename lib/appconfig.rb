@@ -56,7 +56,7 @@ module Appconfig
         wizard_transactions = tr_csv.split(',').uniq
         # should help with specialized meta codes
         transaction_meta[m_code]||=Hash.new { |k, v| k[v]=[] }
-        #transaction_stages=transaction_meta[m_code]
+        #known_transaction_stages=transaction_meta[m_code]
         editors = wizard.css('editor')
         key = Digest::SHA1.base64digest(editors.to_xml)
         editors_cache_stat[key]+=1
@@ -102,40 +102,42 @@ module Appconfig
       puts "There is found #{wizards.count} wizard(s)." if options[:verbose]
       known_transaction_codes = Hash.new { |k, v| k[v]=[] }
       transaction_meta = Hash.new
-      transaction_stages=Hash.new { |k, v| k[v]=[] }
-
+      known_transaction_stages=Hash.new { |k, v| k[v]=[] }
       #editorsBigHash = Hash.new
       #load_meta_data
-
       wizards.each do |wizard|
         stages_csv = wizard[:stages]
         stages = stages_csv.split(',').uniq
         assembly = wizard[:assembly]
-        m_code, tr_csv = wizard[:meta].split(';')
+        meta_type_code, tr_csv = wizard[:meta].split(';')
         wizard_transactions = tr_csv.split(',').uniq
-
         # should help with specialized meta codes
-        transaction_meta[m_code]||=Hash.new { |k, v| k[v]=[] }
-        #transaction_stages=transaction_meta[m_code]
-        normalized = []
+        #transaction_meta[meta_type_code]||=Hash.new { |k, v| k[v]=[] }
+        #known_transaction_stages=transaction_meta[m_code]
+
         if (wizard_transactions.count>1) ||(stages.count>1) #otherwise it already optimized
-          puts "Wizard transactions[#{tr_csv}, meta[#{m_code}]" if options[:verbose]
+          puts "Wizard transactions[#{tr_csv}, meta[#{meta_type_code}]" if options[:verbose]
+          normalized_wizards = []
           wizard_transactions.each do |code|
             #collect described transaction codes
-            normalizer_process_transactions(assembly, code, known_transaction_codes, m_code, normalized, stages, transaction_stages, wizard)
+            normalizer_process_transactions(assembly, code, known_transaction_codes, meta_type_code, normalized_wizards, stages, known_transaction_stages, wizard)
           end
+          normalized_wizards.each { |item| wizard.before(item) }
+          wizard.unlink
         else
-          normalized<<wizard.dup
           code = wizard_transactions.at(0)
           stage = stages.at(0)
-          transaction_stages[code]<<stage
+          #known_transaction_stages[code]<<stage
+          known_transaction_stages[code]<<{:stage => stage, :code => meta_type_code} #stage
           puts "Optimal -> transaction[#{code}].stage[#{stage}]" if options[:verbose]
         end
-        normalized.each { |item| wizard.before(item) }
-        wizard.remove
       end
+      #puts @doc.css('wizard').to_xml
+      #puts "Sorting:"
+      #sort_wizards(@doc.xpath('/configuration/Wizards/wizard'))
+      sort_wizards(@doc.at('//Wizards'))
+      #puts @doc.css('wizard').to_xml
 
-      sort_wizards(wizards)
       known_tr = known_transaction_codes.keys.count
       --known_tr if known_transaction_codes.keys.include?('all')
       puts "Known transaction codes: #{known_tr}" if options[:verbose]
@@ -277,61 +279,66 @@ module Appconfig
       @transaction_meta_data[code]
     end
 
-    # @param [String] assembly
-    # @param [String] code
-    # @param [Hash] known_transaction_codes
-    # @param [String] meta_type_code
-    # @param [Nokogiri::XML::NodeSet] normalized
-    # @param [Array] wizard_stages
-    # @param [Hash] transaction_stages
-    # @param [Nokogiri::XML::Node] wizard
-    def normalizer_process_transactions(assembly, code, known_transaction_codes, meta_type_code, normalized, wizard_stages, transaction_stages, wizard)
+    # @param [String] assembly (Wizard class name)
+    # @param [String] code  (Transaction code, may be 'all')
+    # @param [Hash] known_transaction_codes (Cached transactions descriptors)
+    # @param [String] meta_type_code (Number that describes transaction metaType or 'all')
+    # @param [Nokogiri::XML::NodeSet] normalized (Cached array of prepared wizards)
+    # @param [Array] wizard_stages (stages section from wizard)
+    # @param [Hash] known_transaction_stages (cached transaction stages)
+    # @param [Nokogiri::XML::Node] wizard (back ref to wizard, for nodes operation)
+    def normalizer_process_transactions(assembly, code, known_transaction_codes, meta_type_code, normalized, wizard_stages, known_transaction_stages, wizard)
+      # will not add to cache if it contains record for transaction in same assembly and metaType (i.m we will have N and 'all' members for some transactions)
       unless known_transaction_codes[code] && known_transaction_codes[code].any? { |item| item[:assembly]==assembly && item[:code]==meta_type_code }
         known_transaction_codes[code]<<{:assembly => assembly, :code => meta_type_code}
-        puts "Added #{code} to known..." if options[:verbose]
+        puts "Added #{code} to known with assembly:#{assembly};code:#{meta_type_code} " if options[:verbose]
       end
 
       wizard_stages.each do |stage|
-        normalizer_process_stages(code, meta_type_code, normalized, stage, transaction_stages, wizard)
+        normalizer_process_stages(code, meta_type_code, normalized, stage, known_transaction_stages, wizard)
       end
     end
 
     # @param [String] trans_code
     # @param [String] meta_type_code
-    # @param [Nokogiri::XML::NodeSet] normalized
+    # @param [Nokogiri::XML::NodeSet] normalized_wizards
     # @param [String] stage
-    # @param [Hash] transaction_stages
+    # @param [Hash] known_transaction_stages (cached transaction stages configured)
     # @param [Nokogiri::XML::Node] wizard
-    def normalizer_process_stages( trans_code, meta_type_code, normalized, stage, transaction_stages, wizard)
-      puts "working out stage #{stage}" if options[:verbose]
+    def normalizer_process_stages( trans_code, meta_type_code, normalized_wizards, stage_name, known_transaction_stages, wizard)
+      puts "working out stage #{stage_name}" if options[:verbose]
 
       #'all' as transaction code matches any transaction to this stage
       # So,if there were such stage, wizard will be skipped by app
-      skipped_by_all = transaction_stages['all'].include?(stage) && trans_code!='all'
+      #skipped_by_all = known_transaction_stages['all'].include?(stage) && trans_code!='all'
+      skipped_by_all = known_transaction_stages['all'].any?{|item| item[:stage]==stage_name && item[:code]==meta_type_code } && trans_code!='all'
       if skipped_by_all && options[:verbose]
-        puts "Warning: override stage #{stage} for transaction #{trans_code} by previous 'all'."
+        puts "Warning: override stage #{stage_name} for transaction #{trans_code} by previous 'all'."
       end
 
-      pp transaction_stages if options[:verbose]
-
-      unless transaction_stages[trans_code].include?(stage)||skipped_by_all
-        transaction_stages[trans_code]<<stage
+      pp known_transaction_stages if options[:verbose]
+      #unless known_transaction_codes[code] && known_transaction_codes[code].any? { |item| item[:assembly]==assembly && item[:code]==meta_type_code }
+      #unless known_transaction_stages[trans_code].include?(stage)||skipped_by_all
+      unless skipped_by_all || known_transaction_stages[trans_code]&&known_transaction_stages[trans_code].any?{ |item|
+          item[:stage]==stage_name&&
+              item[:code]==meta_type_code}
+        #known_transaction_codes[code]<<{:assembly => assembly, :code => meta_type_code}
+        known_transaction_stages[trans_code]<<{:stage => stage_name, :code => meta_type_code} #stage
 
         puts "new wizard!" if options[:verbose]
-
         #we will not modify there, validation check should be done separately
         #if wizardMetaAccepatable(wizard[:meta],code,getTransactionMetaCode(code))
 
         #normalizer should remove all found codes and processed stages
         new_wizard = wizard.dup()
         new_wizard[:meta] = "#{meta_type_code};#{trans_code}"
-        new_wizard[:stages] = stage
+        new_wizard[:stages] = stage_name
 
         #editors = new_wizard.css('editor')
         #key = Digest::SHA1.base64digest(editors.to_xml)
         #editorsBigHash[key]=editors
 
-        normalized<<new_wizard
+        normalized_wizards<<new_wizard
       end
     end
 
@@ -429,11 +436,22 @@ module Appconfig
     #@param doc [Nokogiri::XML::NodeSet]
     def sort_wizards(doc)
 
+      doc.search('./wizard').sort{ |a_node, b_node| compare_wizards(a_node, b_node) }.each do |w|
+        doc<<w
+      end
+
+    end
+
+    # this one some how cant update cached nodes?!
+    #@param doc [Nokogiri::XML::NodeSet]
+    def sort_wizards1(doc)
+
       if doc.count>0
         #doc.remove #unlink from document
 
         nodes = doc.sort { |a_node, b_node| compare_wizards(a_node, b_node) }.each do |node|
           node.unlink
+          # node
         end
 
         nodes.each { |node| doc << node }

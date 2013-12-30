@@ -1,6 +1,8 @@
 Feature: Normalize stages
-  In order to compare config versions we may need to see un-optimized wizard sections
-  it means each transaction for each stage
+  In order to compare config versions we need to see un-optimized wizard sections
+  it means each transaction for each stage and "all" generalizer converted to real transactions.
+  The 'all' keyword may appear in the stage name or transaction code. Unfortunately it can't be
+  clear what the real stages should be there, cause wf may have different versions with still running transactions.
 
   Scenario: Split wizard stages for each transaction code
   Wizard stages may be specified as csv list, we need to split it on separate wizard definition
@@ -11,11 +13,7 @@ Feature: Normalize stages
 			<configuration>
 				<Wizards>
 					<wizard stages="New,Intake,Rejected,LodgmentApplication" assembly="WAssess"  meta="all;BLDT">
-						<editor name="transaction" type="LRS.Client.Assess.TransactionListPage,WAssess" help="28"/>
-						<editor name="applicant" type="LRS.Client.Assess.ApplicantsPage,WAssess" help="191"/>
-						<editor name="properties" type="LRS.Client.Assess.PropertiesPage,WAssess" help="136" mainForm="PropertyFormNonMandatoryApproximate" plotForm="PlotFormNonMandatory" unitForm="UnitFormNonMandatory" buildingForm="BuildingFormNonMandatory" />
-						<editor name="barcode" type="LRS.Client.Assess.PageBarcode,WAssess" help="165"/>
-						<editor name="complete" type="LRS.Core.CompletePage,LRS.Data.Controls" help="30"/>
+						<![CDATA[...]]>
 					</wizard>
 				</Wizards>
 			</configuration>
@@ -32,49 +30,41 @@ Feature: Normalize stages
 
 			<configuration>
 				<Wizards>
-					<wizard stages="LodgmentApplication" assembly="WAssess"  meta="all;BLDT,BLDJ">
-						<editor name="transaction" type="LRS.Client.Assess.TransactionListPage,WAssess" help="28"/>
-						<editor name="applicant" type="LRS.Client.Assess.ApplicantsPage,WAssess" help="191"/>
-						<editor name="properties" type="LRS.Client.Assess.PropertiesPage,WAssess" help="136" mainForm="PropertyFormNonMandatoryApproximate" plotForm="PlotFormNonMandatory" unitForm="UnitFormNonMandatory" buildingForm="BuildingFormNonMandatory" />
-						<editor name="barcode" type="LRS.Client.Assess.PageBarcode,WAssess" help="165"/>
-						<editor name="complete" type="LRS.Core.CompletePage,LRS.Data.Controls" help="30"/>
-					</wizard>
+					<wizard stages="S1" assembly="WAssess"  meta="all;T1,T2">
+                      <![CDATA[...]]>
+                    </wizard>
 				</Wizards>
 			</configuration>
 			"""
     When I normalize "SingleStageMultiTransaction.config"
     Then "SingleStageMultiTransaction.config.xml" produced in data:
-    And "SingleStageMultiTransaction.config.xml" contains 2 wizards with transaction in "BLDT,BLDJ"
+    And "SingleStageMultiTransaction.config.xml" contains 2 wizards with transaction in "T1,T2"
 
 
   Scenario: Skip wizard with processed stage for given transaction code
   Wizards for same transaction may have several records with same stage, only 1st should be used
+  During normalization sort order applied STAGE->TRANSACTION
     Given I have "DupStagesSingleTransaction.config" in data:
     """
 			<?xml version="1.0"?>
 
 			<configuration>
 				<Wizards>
-					<wizard stages="LodgmentApplication" assembly="WAssess"  meta="all;BLDT">
-						<editor name="transaction" type="LRS.Client.Assess.TransactionListPage,WAssess" help="28"/>
-						<editor name="applicant" type="LRS.Client.Assess.ApplicantsPage,WAssess" help="191"/>
-						<editor name="properties" type="LRS.Client.Assess.PropertiesPage,WAssess" help="136" mainForm="PropertyFormNonMandatoryApproximate" plotForm="PlotFormNonMandatory" unitForm="UnitFormNonMandatory" buildingForm="BuildingFormNonMandatory" />
-						<editor name="barcode" type="LRS.Client.Assess.PageBarcode,WAssess" help="165"/>
-						<editor name="complete" type="LRS.Core.CompletePage,LRS.Data.Controls" help="30"/>
+					<wizard stages="Stage1" assembly="WAssess"  meta="all;A">
+					  <![CDATA[ ... ]]>
 					</wizard>
-					<wizard stages="Intake,LodgmentApplication" assembly="WAssess"  meta="all;BLDT,BLDJ">
-						<editor name="transaction" type="LRS.Client.Assess.TransactionListPage,WAssess" help="28"/>
-						<editor name="applicant" type="LRS.Client.Assess.ApplicantsPage,WAssess" help="191"/>
-						<editor name="properties" type="LRS.Client.Assess.PropertiesPage,WAssess" help="136" mainForm="PropertyFormNonMandatoryApproximate" plotForm="PlotFormNonMandatory" unitForm="UnitFormNonMandatory" buildingForm="BuildingFormNonMandatory" />
-						<editor name="barcode" type="LRS.Client.Assess.PageBarcode,WAssess" help="165"/>
-						<editor name="complete" type="LRS.Core.CompletePage,LRS.Data.Controls" help="30"/>
+					<wizard stages="Stage2" assembly="WAssess"  meta="all;A">
+					  <![CDATA[ ... ]]>
+					</wizard>
+					<wizard stages="Stage1,Stage2" assembly="WAssess"  meta="all;A,B">
+						<![CDATA[ ... ]]>
 					</wizard>
 				</Wizards>
 			</configuration>
 			"""
     When I normalize "DupStagesSingleTransaction.config"
     Then "DupStagesSingleTransaction.config.xml" produced in data:
-    And "DupStagesSingleTransaction.config.xml" contains 4 wizards with transaction in "BLDT,BLDJ"
+    And "DupStagesSingleTransaction.config.xml" contains 4 wizards with stage order "Stage1,Stage1,Stage2,Stage2" and code order "A,B,A,B"
 
   Scenario: Skip wizard with processed stage for ALL transaction meta code
   Wizards for same transaction may have several records with same stage, only 1st should be used
@@ -85,56 +75,42 @@ Feature: Normalize stages
 
 			<configuration>
 				<Wizards>
-					<wizard stages="LodgmentApplication" assembly="WAssess"  meta="all;all">
-						<editor name="transaction" type="LRS.Client.Assess.TransactionListPage,WAssess" help="28"/>
-						<editor name="applicant" type="LRS.Client.Assess.ApplicantsPage,WAssess" help="191"/>
-						<editor name="properties" type="LRS.Client.Assess.PropertiesPage,WAssess" help="136" mainForm="PropertyFormNonMandatoryApproximate" plotForm="PlotFormNonMandatory" unitForm="UnitFormNonMandatory" buildingForm="BuildingFormNonMandatory" />
-						<editor name="barcode" type="LRS.Client.Assess.PageBarcode,WAssess" help="165"/>
-						<editor name="complete" type="LRS.Core.CompletePage,LRS.Data.Controls" help="30"/>
+					<wizard stages="Stage1" assembly="WAssess"  meta="all;all">
+						<![CDATA[...]]>
 					</wizard>
-					<wizard stages="Intake,LodgmentApplication" assembly="WAssess"  meta="all;BLDT">
-						<editor name="transaction" type="LRS.Client.Assess.TransactionListPage,WAssess" help="28"/>
-						<editor name="applicant" type="LRS.Client.Assess.ApplicantsPage,WAssess" help="191"/>
-						<editor name="properties" type="LRS.Client.Assess.PropertiesPage,WAssess" help="136" mainForm="PropertyFormNonMandatoryApproximate" plotForm="PlotFormNonMandatory" unitForm="UnitFormNonMandatory" buildingForm="BuildingFormNonMandatory" />
-						<editor name="barcode" type="LRS.Client.Assess.PageBarcode,WAssess" help="165"/>
-						<editor name="complete" type="LRS.Core.CompletePage,LRS.Data.Controls" help="30"/>
+					<wizard stages="Stage1,Stage2" assembly="WAssess"  meta="all;T1">
+						<![CDATA[...]]>
 					</wizard>
 				</Wizards>
 			</configuration>
 			"""
     When I normalize "DupAllStageSingleTransaction.config"
     Then "DupAllStageSingleTransaction.config.xml" produced in data:
-    And "DupAllStageSingleTransaction.config.xml" contains 2 wizards with transaction in "BLDT,all"
+    And "DupAllStageSingleTransaction.config.xml" contains 2 wizards with transaction in "T1,all"
 
   Scenario: Skip wizard with meta-type dependent ALL transaction meta
-  Wizards for same transaction may have several records with same stage, but transaction meta may be specified
-  Stage appeared to be matched if it contains "all" for transaction code but meta should be equal to skip
+  Wizards for same transaction may have several records with same stage, but different transaction meta specified
+  Stage appeared to be matched if it contains "all" for transaction code but meta should be equal to transaction meta or all
+  So normalization and sorting will put such definition just before "Stage-all;all" tag as "stage-<code>;all"
+
     Given I have "SpecialMetaAllStageSingleTransaction.config" in data:
     """
 			<?xml version="1.0"?>
 
 			<configuration>
 				<Wizards>
-					<wizard stages="LodgmentApplication" assembly="WAssess"  meta="7;all">
-						<editor name="transaction" type="LRS.Client.Assess.TransactionListPage,WAssess" help="28"/>
-						<editor name="applicant" type="LRS.Client.Assess.ApplicantsPage,WAssess" help="191"/>
-						<editor name="properties" type="LRS.Client.Assess.PropertiesPage,WAssess" help="136" mainForm="PropertyFormNonMandatoryApproximate" plotForm="PlotFormNonMandatory" unitForm="UnitFormNonMandatory" buildingForm="BuildingFormNonMandatory" />
-						<editor name="barcode" type="LRS.Client.Assess.PageBarcode,WAssess" help="165"/>
-						<editor name="complete" type="LRS.Core.CompletePage,LRS.Data.Controls" help="30"/>
+					<wizard stages="S1" assembly="WAssess"  meta="1;all">
+						<![CDATA[...]]>
 					</wizard>
-					<wizard stages="Intake,LodgmentApplication" assembly="WAssess"  meta="all;BLDT">
-						<editor name="transaction" type="LRS.Client.Assess.TransactionListPage,WAssess" help="28"/>
-						<editor name="applicant" type="LRS.Client.Assess.ApplicantsPage,WAssess" help="191"/>
-						<editor name="properties" type="LRS.Client.Assess.PropertiesPage,WAssess" help="136" mainForm="PropertyFormNonMandatoryApproximate" plotForm="PlotFormNonMandatory" unitForm="UnitFormNonMandatory" buildingForm="BuildingFormNonMandatory" />
-						<editor name="barcode" type="LRS.Client.Assess.PageBarcode,WAssess" help="165"/>
-						<editor name="complete" type="LRS.Core.CompletePage,LRS.Data.Controls" help="30"/>
+					<wizard stages="S1,S2" assembly="WAssess"  meta="all;T1">
+						<![CDATA[...]]>
 					</wizard>
 				</Wizards>
 			</configuration>
 			"""
     When I normalize "SpecialMetaAllStageSingleTransaction.config"
     Then "SpecialMetaAllStageSingleTransaction.config.xml" produced in data:
-    And "SpecialMetaAllStageSingleTransaction.config.xml" contains 3 wizards with transaction in "BLDT,all"
+    And "SpecialMetaAllStageSingleTransaction.config.xml" contains 3 wizards with stage order "S1,S1,S2" and code order "T1,all,T1"
 
 	Scenario: Sorting of wizards by stages and transaction codes
     Given I have "NormalizeAndSort.config" in data:
@@ -144,14 +120,14 @@ Feature: Normalize stages
 			<configuration>
 				<Wizards>
 					<wizard stages="A,D" assembly="WAssess"  meta="all;T1,T3">
-						<editor name="1" type="2" help="28"/>
+						<![CDATA[...]]>
 					</wizard>
 					<wizard stages="B,C" assembly="WAssess"  meta="all;T4,T2">
-						<editor name="1" type="2" help="28"/>
+						<![CDATA[...]]>
 					</wizard>
 				</Wizards>
 			</configuration>
 	"""
 	When I normalize with sorting "NormalizeAndSort.config"
     Then "NormalizeAndSort.config.xml" produced in data:
-    And "NormalizeAndSort.config.xml" contains 8 wizards with stage order "A,B,C,D" and code order "T1,T2,T3,T4"
+    And "NormalizeAndSort.config.xml" contains 8 wizards with stage order "A,A,B,B,C,C,D,D" and code order "T1,T3,T2,T4,T2,T4,T1,T3"
