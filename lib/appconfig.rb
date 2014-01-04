@@ -67,8 +67,8 @@ module Appconfig
           parent_assembly = parent[:assembly]
           parent_m_code, parent_tr_csv = parent_meta.split(';')
           if (parent_m_code==m_code||parent_m_code=='all') && parent_assembly==assembly
-            new_stages=(parent_stages.split(',')+stages).uniq.join(',')
-            new_trlist = (parent_tr_csv.split(',')+wizard_transactions).uniq.join(',')
+            new_stages=(parent_stages.split(',')+stages).uniq.sort.join(',')
+            new_trlist = (parent_tr_csv.split(',')+wizard_transactions).uniq.sort.join(',')
             new_meta = "#{parent_m_code};#{new_trlist}"
             parent[:stages]=new_stages
             parent[:meta] = new_meta
@@ -76,6 +76,10 @@ module Appconfig
           else
           end
         else
+          new_trlist = wizard_transactions.sort.join(',')
+          new_stages = stages.sort.join(',')
+          wizard[:stages]=new_stages
+          wizard[:meta] ="#{m_code};#{new_trlist}"
           editors_cache[key]={:stat => 1, :xml => editors, :wizard => wizard}
         end
       end
@@ -88,6 +92,8 @@ module Appconfig
           uq_ed +=1
         end
       end
+      sort_wizards(@doc.at('//Wizards'))
+
       puts "Unique sets: #{uq_ed}" if uq_ed
       write_file(filename+".xml")
       #exit(0)
@@ -404,7 +410,78 @@ module Appconfig
       tr_csv = tr_csv.split(',').sort.uniq.join(',')
       return {:stages => stages_csv, :assembly => assembly, :meta_code => meta_code, :transaction => tr_csv}
     end
+=begin
 
+    I would like to have there something like this
+
+    stages, meta; codes
+
+    stages[X]
+      meta[all; codes<>all]
+      meta[<>all,codes<>all]
+      meta[<>all,all]
+      meta[all,all]
+    stages[all]
+      meta[all; codes<>all]
+      meta[<>all,codes<>all]
+      meta[<>all,all]
+      meta[all,all]
+
+=end
+  def compare2(a,b)
+
+    stage_a_all = a[:stages]=='all'
+    stage_b_all = b[:stages]=='all'
+
+    meta_a_all = a[:meta_code]=='all'
+    meta_b_all = b[:meta_code]=='all'
+
+    codes_a_all = a[:transaction] == 'all'
+    codes_b_all = b[:transaction] == 'all'
+
+    if(a[:stages]!=b[:stages])
+      return -1 if(stage_a_all&&!stage_b_all)
+      return 1 if(!stage_a_all&&stage_b_all)
+      return a[:stages].to_s <=> b[:stages].to_s
+    end
+
+    a_type1 = meta_a_all && !codes_a_all
+    b_type1 = meta_b_all && !codes_b_all
+
+    a_type2 = !meta_a_all && !codes_a_all
+    b_type2 = !meta_b_all && !codes_b_all
+
+    a_type3 = !meta_a_all && codes_a_all
+    b_type3 = !meta_b_all && codes_b_all
+
+    a_type4 = meta_a_all && codes_a_all
+    b_type4 = meta_b_all && codes_b_all
+
+    if(a[:meta_code]!=b[:meta_code])
+      return 1 if(a_type1 && !b_type1)
+      return -1 if(!a_type1 && b_type1)
+
+      return 1 if(a_type2 && (b_type3||b_type4))
+      return -1 if(b_type2 && (a_type3||a_type4))
+
+      return 1 if(a_type3 && b_type4)
+      return -1 if(b_type3 && a_type4)
+    end
+
+
+
+    if(a_type1 && b_type1)
+
+    end
+
+    return 1 if(a_type2 && !b_type2)
+    return -1 if(!a_type2 && b_type2)
+
+    return 1 if(a_type3 && !b_type3)
+    return -1 if(!a_type3 && b_type3)
+
+    return 0
+  end
     # return -1 if a<b |0 if a==b|1 if a>b
     #@param a_wizard [Nokogiri::XML::Node]
     #@param b_wizard [Nokogiri::XML::Node]
