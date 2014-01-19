@@ -32,7 +32,8 @@ Feature: Optimize stages
 			"""
     When I optimize "OptSingleStageSingleTransaction.config"
     Then "OptSingleStageSingleTransaction.config.xml" produced in data:
-    And "OptSingleStageSingleTransaction.config.xml" contains 1 wizards with stages="New,Intake" and meta="all;BLDT"
+	#note: Intake,New - > cause alphabetical order used
+    And "OptSingleStageSingleTransaction.config.xml" contains 1 wizards with stages="Intake,New" and meta="all;BLDT"
 
   Scenario: Dont Merge wizard stages for each transaction where stage has different Transaction Meta Type
   Wizards with same stages but having different meta-type code can't be merged into single wizard description
