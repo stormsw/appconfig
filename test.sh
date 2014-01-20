@@ -1,4 +1,5 @@
 #!/bin/bash
+echo $1
 if [ $1 = "" ]
 then
   echo "/data/PROJECT/" should be specified. At ex. ugmn

@@ -47,14 +47,7 @@ Then(/^"(.*?)" contains (\d+) wizards with stage in "(.*?)"$/) do |filename, wco
 end
 
 Then(/^"(.*?)" contains (\d+) wizards with transaction in "(.*?)"$/) do |filename, wcount, wnames|
-  doc = Nokogiri::XML(File.open('tmp/'+filename)) do |config|
-    # NOBLANKS - Remove blank nodes
-    # NOENT - Substitute entities
-    # NOERROR - Suppress error reports
-    # STRICT - Strict parsing; raise an error when parsing malformed documents
-    # NONET - Prevent any network connections during parsing. Recommended for parsing untrusted documents.
-    config.strict.nonet
-  end
+  doc = read_appconfig_xml(filename)
   wizards = doc.xpath('//wizard')
   wizards.count.should==wcount.to_i
   #wizards.each{|w|stages<<w[:stages]}
@@ -94,14 +87,7 @@ When(/^I normalize with sorting "(.*?)"$/) do |filename|
 end
 
 Then(/^"(.*?)" contains (\d+) wizards with stage order "(.*?)" and code order "(.*?)"$/) do |filename, wcount, wstages, wcodes|
-  doc = Nokogiri::XML(File.open('tmp/'+filename)) do |config|
-  # NOBLANKS - Remove blank nodes
-  # NOENT - Substitute entities
-  # NOERROR - Suppress error reports
-  # STRICT - Strict parsing; raise an error when parsing malformed documents
-  # NONET - Prevent any network connections during parsing. Recommended for parsing untrusted documents.
-	config.strict.nonet
-  end
+  doc = read_appconfig_xml(filename)
   wizards = doc.xpath('//wizard')
   wizards.count.should==wcount.to_i
   stages=[]
@@ -114,15 +100,19 @@ Then(/^"(.*?)" contains (\d+) wizards with stage order "(.*?)" and code order "(
   codes.join(',').should==wcodes
 end
 
-Then(/^"(.*?)" contains (\d+) wizards with stages="(.*?)" and meta="(.*?)"$/) do |filename, wcount, wstages, wcodes|
+def read_appconfig_xml(filename)
   doc = Nokogiri::XML(File.open('tmp/'+filename)) do |config|
-  # NOBLANKS - Remove blank nodes
-  # NOENT - Substitute entities
-  # NOERROR - Suppress error reports
-  # STRICT - Strict parsing; raise an error when parsing malformed documents
-  # NONET - Prevent any network connections during parsing. Recommended for parsing untrusted documents.
-	config.strict.nonet
+    # NOBLANKS - Remove blank nodes
+    # NOENT - Substitute entities
+    # NOERROR - Suppress error reports
+    # STRICT - Strict parsing; raise an error when parsing malformed documents
+    # NONET - Prevent any network connections during parsing. Recommended for parsing untrusted documents.
+    config.strict.nonet
   end
+end
+
+Then(/^"(.*?)" contains (\d+) wizards with stages="(.*?)" and meta="(.*?)"$/) do |filename, wcount, wstages, wcodes|
+  doc = read_appconfig_xml(filename)
   wizards = doc.xpath('//wizard')
   wizards.count.should==wcount.to_i
   #stages,codes=[]
@@ -130,4 +120,12 @@ Then(/^"(.*?)" contains (\d+) wizards with stages="(.*?)" and meta="(.*?)"$/) do
 	w[:stages].should==wstages
 	w[:meta].should==wcodes
   end
+end
+
+Then(/^"(.*?)" contains (\d+) wizards with data:$/) do |filename, wcount, table|
+  # table is a Cucumber::Ast::Table
+  table.hashes.each do |post|
+    # post['amount'] is a Fixnum, rather than a String
+  end
+  pending # express the regexp above with the code you wish you had
 end
