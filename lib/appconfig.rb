@@ -225,7 +225,8 @@ module Appconfig
     method_option :show_dups, :type => :boolean, :aliases => '-d', :desc => 'Verbose output of XML block when given stage already parsed.'
     method_option :show_editors, :type => :boolean, :aliases => '-e', :desc => 'Print editors for each stage.'
     method_option :show_meta, :type => :boolean, :aliases => '-m', :desc => 'Print wizard configuration meta.'
-
+	method_option :show_line, :type => :boolean, :aliases => '-l', :desc => 'Print configuration line number for wizard.'
+	method_option :stage, :aliases => '-s', :desc => 'Filter stage to name'
     def stages(filename, transaction_code)
       @doc = read_file(filename)
       wizards = @doc.xpath('/configuration/Wizards')
@@ -266,14 +267,20 @@ module Appconfig
               clear_name = editor[:name].split(':').first
               editors_names<<clear_name
             }
-            stages.each { |stage| stages_transactions[stage] = {:editors => editors_names, :meta => meta} }
+            stages.each { |stage| stages_transactions[stage] = {:editors => editors_names, :meta => meta, :line => wizard.line } }
           end
         end
         puts "Configured stages for transaction #{transaction_code}:"
         stages_transactions.each do |key, val|
-          puts "\t\t#{key}"
-          puts "\t\t\tmeta: #{val[:meta]}" if options[:show_meta]
-          val[:editors].each { |ed| puts "\t\t\t\t#{ed}" } if options[:show_editors]
+		  if options[:stage] 
+			if options[:stage].upcase!=key.upcase
+				next
+			end
+		  end
+			line_number = options[:show_line]?val[:line]:''
+			puts "\t#{line_number}\t#{key}"
+			puts "\t\t\tmeta: #{val[:meta]}" if options[:show_meta]
+			val[:editors].each { |ed| puts "\t\t\t\t\t#{ed}" } if options[:show_editors]		 
         end
       else
         raise "ERROR: invalid config file. Wizards section not found"
