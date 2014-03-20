@@ -508,8 +508,8 @@ module Appconfig
       return stc if stc!=0
 
       #tr_csv
-      return -1 if (a[:transaction] == "all" && b[:transaction]!="all")
-      return 1 if (a[:transaction] != "all" && b[:transaction]=="all")
+      return 1 if (a[:transaction] == "all" && b[:transaction]!="all")
+      return -1 if (a[:transaction] != "all" && b[:transaction]=="all")
       stc = a[:transaction].to_s <=> b[:transaction].to_s
       return stc if stc!=0
 

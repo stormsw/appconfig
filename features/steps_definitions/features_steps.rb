@@ -124,8 +124,11 @@ end
 
 Then(/^"(.*?)" contains (\d+) wizards with data:$/) do |filename, wcount, table|
   # table is a Cucumber::Ast::Table
-  table.hashes.each do |post|
-    # post['amount'] is a Fixnum, rather than a String
+  doc = read_appconfig_xml(filename)
+  wizards = doc.xpath('//wizard')
+  wizards.count.should==wcount.to_i
+  table.hashes.each.with_index do |post,index|
+	post[:meta].should==wizards[index][:meta]
+	post[:stage].should==wizards[index][:stages]
   end
-  pending # express the regexp above with the code you wish you had
 end

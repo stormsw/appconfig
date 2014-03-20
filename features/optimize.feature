@@ -1,7 +1,7 @@
 Feature: Optimize stages
   In order to compress config file we may need to generate optimized wizard sections
   it means each transaction for each stages with same editors set should be placed in same wizard
-  But wizard order should matter
+  But wizard order should matter bla
 
   Scenario: Merge wizard stages for each transaction code
   Wizards with same transaction code but different stages having equivalent set of editors should be merged into single wizard description
@@ -9,7 +9,7 @@ Feature: Optimize stages
 
     Given I have "OptSingleStageSingleTransaction.config" in data:
     """
-			<?xml version="1.0"?>
+	<?xml version="1.0"?>
 
 			<configuration>
 				<Wizards>
@@ -35,37 +35,13 @@ Feature: Optimize stages
 	#note: Intake,New - > cause alphabetical order used
     And "OptSingleStageSingleTransaction.config.xml" contains 1 wizards with stages="Intake,New" and meta="all;BLDT"
 
-#looks like scenario is incorrect, it's no matter when transactions has same hash
-#  Scenario: Dont Merge wizard stages for each transaction where stage has different Transaction Meta Type
-#  Wizards with same stages but having different meta-type code can't be merged into single wizard description
-#  Make sure sorting will put meta with numeric code above metaType 'all' for same stage
-
-#    Given I have "OptMultiStageMultiTransactionDiffCode.config" in data:
-#    """
-#			<?xml version="1.0"?>
-#
-#			<configuration>
-#				<Wizards>
-#					<wizard stages="Stage1" assembly="WAssess"  meta="all;T1">
-#						<editor name="transaction"/>
-#					</wizard>
-#					<wizard stages="Stage2" assembly="WAssess"  meta="2;T2">
-#						<editor name="transaction"/>
-#					</wizard>
-#				</Wizards>
-#			</configuration>
-#			"""
-#    When I optimize "OptMultiStageMultiTransactionDiffCode.config"
-#    Then "OptMultiStageMultiTransactionDiffCode.config.xml" produced in data:
-#    And "OptMultiStageMultiTransactionDiffCode.config.xml" contains 2 wizards with stage order "Stage1,Stage2" and code order "T1,T2"
-
   Scenario: Merge wizard stages for each transaction code but care out Transaction Meta Type
   Wizards with same editors and different stages, having different meta-type code, but same Transaction CODE must be merged into single wizard description
   Make sure sorting will put meta with numeric code above metaType 'all' for same stage
 
     Given I have "OptMultiStageSingleTransactionDiffCode.config" in data:
     """
-			<?xml version="1.0"?>
+	<?xml version="1.0"?>
 
 			<configuration>
 				<Wizards>
@@ -86,7 +62,7 @@ Feature: Optimize stages
     Its hard to compare result over false differences occured after optmization
     Given I have "OptSingleStageMultiTransactionMixCode.config" in data:
     """
-			<?xml version="1.0"?>
+	<?xml version="1.0"?>
 
 			<configuration>
 				<Wizards>
@@ -101,36 +77,22 @@ Feature: Optimize stages
     And "OptSingleStageMultiTransactionMixCode.config.xml" contains 1 wizards with stages="Stage1" and meta="all;T1,T2,T3"
 
  Scenario: Optimizer should sort wizard with meta "all:all" as last choice, not alphabetically
-	Given I have "OptMultiStageMultyTransactionWithAllMeta.config" in data:
-	"""
-		<?xml version="1.0"?>
+    Given I have "OptMultiStageMultyTransactionWithAllMeta.config" in data:
+    """
+			<?xml version="1.0" encoding="UTF-8"?>
 			<configuration>
 				<Wizards>
-					<wizard stages="CreateParcelMC" assembly="WAssess" meta="all;all">
-					  <editor name="transaction:TransactionFormFirstRegDataFH::RO" type="LRS.Client.Assess.TransactionWithDocumentsPage,WAssess" documents="" docEnabled="true" help="28"/>
-					  <editor name="applicant:::RO" type="LRS.Client.Assess.ApplicantsPage,WAssess" help="191"/>
-					  <editor name="parties" type="LRS.Client.Assess.PartiesPage,WAssess" help="136" mainForm="PartiesGrid" partyForm="PartyForm" individualForm="IndividualForm" corporationForm="CorporationForm" foreignForm="CorporationStateForeignForm" stateForm="CorporationStateForm" fromWizard="true"/>
-					  <editor name="properties" type="LRS.Client.Assess.PropertiesPage,WAssess" mapvisible="1" mapreadonly="0" help="148" mainForm="PropertyForm" plotForm="PlotForm" unitForm="UnitForm" buildingForm="BuildingForm" checkJob="job_create_update_parcel"/>
-					  <editor name="complete" type="LRS.Core.CompletePage,LRS.Data.Controls" rules="CreateMCJob:Prepare Deed Plan|job_deedplan" help="144"/>
+					<wizard stages="stage1" assembly="WAssess" meta="all;all">
+					  <editor name="1"/>
 					</wizard>
-					<wizard stages="CreateParcelMC" assembly="WAssess" meta="all;ACULC,ACULCVL,FH,FRHC,FRHG,RPFT">
-					  <editor name="transaction:TransactionFormFirstRegData::RO" type="LRS.Client.Assess.TransactionWithDocumentsPage,WAssess" documents="" docEnabled="true" help="28"/>
-					  <editor name="applicant:::RO" type="LRS.Client.Assess.ApplicantsPage,WAssess" help="191"/>
-					  <editor name="parties:::RO" type="LRS.Client.Assess.PartiesPage,WAssess" help="136" mainForm="PartiesGrid" partyForm="PartyForm" individualForm="IndividualForm" corporationForm="CorporationForm" foreignForm="CorporationStateForeignForm" stateForm="CorporationStateForm" fromWizard="true"/>
-					  <editor name="properties" type="LRS.Client.Assess.PropertiesPage,WAssess" mapvisible="1" mapreadonly="0" help="148" mainForm="PropertyForm" plotForm="PlotForm" unitForm="UnitForm" buildingForm="BuildingForm" checkJob="job_create_update_parcel"/>
-					  <editor name="complete" type="LRS.Core.CompletePage,LRS.Data.Controls" rules="CreateMCJob:Prepare Deed Plan|job_deedplan" help="144"/>
+					<wizard stages="stage1" assembly="WAssess" meta="all;G">
+					  <editor name="4"/>
 					</wizard>
-					<wizard stages="CreateParcelMC" assembly="WAssess" meta="all;LHAPPDLB,LHULC,RPLT">
-					  <editor name="transaction:TransactionFormValueLH::RO" type="LRS.Client.Assess.TransactionWithDocumentsPage,WAssess" documents="" docEnabled="true" help="28"/>
-					  <editor name="applicant:::RO" type="LRS.Client.Assess.ApplicantsPage,WAssess" help="191"/>
-					  <editor name="parties:::RO" type="LRS.Client.Assess.PartiesPage,WAssess" help="136" mainForm="PartiesGrid" partyForm="PartyForm" individualForm="IndividualForm" corporationForm="CorporationForm" foreignForm="CorporationStateForeignForm" stateForm="CorporationStateForm" fromWizard="true"/>
-					  <editor name="properties" type="LRS.Client.Assess.PropertiesPage,WAssess" mapvisible="1" mapreadonly="0" help="148" mainForm="PropertyForm" plotForm="PlotForm" unitForm="UnitForm" buildingForm="BuildingForm" checkJob="job_create_update_parcel"/>
-					  <editor name="complete" type="LRS.Core.CompletePage,LRS.Data.Controls" rules="CreateMCJob:Prepare Deed Plan|job_deedplan" help="144"/>
+					<wizard stages="stage1" assembly="WAssess" meta="all;B,F,D">
+					  <editor name="3"/>
 					</wizard>
-					<wizard stages="CreateParcelMC" assembly="WAssess" meta="all;LHULC">
-					  <editor name="transaction:TransactionFormValueLH::RO" type="LRS.Client.Assess.TransactionWithDocumentsPage,WAssess" checkPages="1" help="150"/>
-					  <editor name="properties" type="LRS.Client.Assess.PropertiesPage,WAssess" mapvisible="1" mapreadonly="1" help="148" mainForm="PropertyFormNonMandatory" plotForm="PlotFormNonMandatory" unitForm="UnitFormNonMandatory" buildingForm="BuildingFormNonMandatory" checkJob="job_create_update_parcel"/>
-					  <editor name="complete" type="LRS.Core.CompletePage,LRS.Data.Controls" help="144"/>
+					<wizard stages="stage1" assembly="WAssess" meta="all;C,A">
+					  <editor name="2"/>
 					</wizard>
 				</Wizards>
 			</configuration>
@@ -138,8 +100,8 @@ Feature: Optimize stages
 		When I optimize "OptMultiStageMultyTransactionWithAllMeta.config"
 		Then "OptMultiStageMultyTransactionWithAllMeta.config.xml" produced in data:
 		And "OptMultiStageMultyTransactionWithAllMeta.config.xml" contains 4 wizards with data:
-            | stage          | meta                                |
-            | CreateParcelMC | all;ACULC,ACULCVL,FH,FRHC,FRHG,RPFT |
-            | CreateParcelMC | all;LHAPPDLB,LHULC,RPLT             |
-            | CreateParcelMC | all;LHULC                           |
-            | CreateParcelMC | all;all                             |
+            | stage  | meta      |
+            | stage1 | all;A,C   |
+            | stage1 | all;B,D,F |
+            | stage1 | all;G     |
+            | stage1 | all;all   |
