@@ -31,14 +31,7 @@ Then(/^"(.*?)" produced in data:$/) do |filename|
 end
 
 Then(/^"(.*?)" contains (\d+) wizards with stage in "(.*?)"$/) do |filename, wcount, wnames|
-  doc = Nokogiri::XML(File.open('tmp/'+filename)) do |config|
-    # NOBLANKS - Remove blank nodes
-    # NOENT - Substitute entities
-    # NOERROR - Suppress error reports
-    # STRICT - Strict parsing; raise an error when parsing malformed documents
-    # NONET - Prevent any network connections during parsing. Recommended for parsing untrusted documents.
-    config.strict.nonet
-  end
+  doc = read_appconfig_xml(filename)
   wizards = doc.xpath('//wizard')
   wizards.count.should==wcount.to_i
   stages=[]
@@ -93,8 +86,8 @@ Then(/^"(.*?)" contains (\d+) wizards with stage order "(.*?)" and code order "(
   stages=[]
   codes=[]
   wizards.each do |w| 
-	stages<<w[:stages]
-	codes<<w[:meta].split(';')[1]
+	  stages<<w[:stages]
+	  codes<<w[:meta].split(';')[1]
   end
   stages.join(',').should==wstages
   codes.join(',').should==wcodes
