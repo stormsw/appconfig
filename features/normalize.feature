@@ -110,7 +110,7 @@ Feature: Normalize stages
 			"""
     When I normalize "SpecialMetaAllStageSingleTransaction.config"
     Then "SpecialMetaAllStageSingleTransaction.config.xml" produced in data:
-    And "SpecialMetaAllStageSingleTransaction.config.xml" contains 3 wizards with stage order "S1,S1,S2" and code order "T1,all,T1"
+    And "SpecialMetaAllStageSingleTransaction.config.xml" contains 3 wizards with stage order "S1,S1,S2" and code order "all,T1,T1"
 
 	Scenario: Sorting of wizards by stages and transaction codes
     Given I have "NormalizeAndSort.config" in data:
@@ -131,3 +131,45 @@ Feature: Normalize stages
 	When I normalize with sorting "NormalizeAndSort.config"
     Then "NormalizeAndSort.config.xml" produced in data:
     And "NormalizeAndSort.config.xml" contains 8 wizards with stage order "A,A,B,B,C,C,D,D" and code order "T1,T3,T2,T4,T2,T4,T1,T3"
+
+  Scenario: When normalizing empty stages in wizards should be skipped as never matched
+
+    Given I have "NormalizeEmptyStage.config" in data:
+    """
+	<?xml version="1.0"?>
+
+			<configuration>
+				<Wizards>
+					<wizard assembly="WAssess"  meta="all;T1">
+						<editor name="transaction1"/>
+					</wizard>
+					<wizard stages="Stage2" assembly="WAssess"  meta="all;T1">
+						<editor name="transaction"/>
+					</wizard>
+				</Wizards>
+			</configuration>
+			"""
+    When I normalize "NormalizeEmptyStage.config"
+    Then "NormalizeEmptyStage.config.xml" produced in data:
+    And "NormalizeEmptyStage.config.xml" contains 1 wizards with stages="Stage2" and meta="all;T1"
+
+  Scenario: When normalizing empty meta in wizards should be skipped as never matched
+
+    Given I have "NormalizeEmptyMeta.config" in data:
+    """
+	<?xml version="1.0"?>
+
+			<configuration>
+				<Wizards>
+					<wizard stages="Stage2" assembly="WAssess">
+						<editor name="transaction1"/>
+					</wizard>
+					<wizard stages="Stage2" assembly="WAssess"  meta="all;T1">
+						<editor name="transaction"/>
+					</wizard>
+				</Wizards>
+			</configuration>
+			"""
+    When I normalize "NormalizeEmptyMeta.config"
+    Then "NormalizeEmptyMeta.config.xml" produced in data:
+    And "NormalizeEmptyMeta.config.xml" contains 1 wizards with stages="Stage2" and meta="all;T1"

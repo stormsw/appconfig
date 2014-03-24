@@ -105,3 +105,45 @@ Feature: Optimize stages
             | stage1 | all;B,D,F |
             | stage1 | all;G     |
             | stage1 | all;all   |
+
+  Scenario: Empty stages in wizards should be skipped as never matched
+
+    Given I have "OptEmptyStage.config" in data:
+    """
+	<?xml version="1.0"?>
+
+			<configuration>
+				<Wizards>
+					<wizard assembly="WAssess"  meta="all;T1">
+						<editor name="transaction1"/>
+					</wizard>
+					<wizard stages="Stage2" assembly="WAssess"  meta="all;T1">
+						<editor name="transaction"/>
+					</wizard>
+				</Wizards>
+			</configuration>
+			"""
+    When I optimize "OptEmptyStage.config"
+    Then "OptEmptyStage.config.xml" produced in data:
+    And "OptEmptyStage.config.xml" contains 1 wizards with stages="Stage2" and meta="all;T1"
+
+  Scenario: Empty meta in wizards should be skipped as never matched
+
+    Given I have "OptEmptyMeta.config" in data:
+    """
+	<?xml version="1.0"?>
+
+			<configuration>
+				<Wizards>
+					<wizard stages="Stage2" assembly="WAssess">
+						<editor name="transaction1"/>
+					</wizard>
+					<wizard stages="Stage2" assembly="WAssess"  meta="all;T1">
+						<editor name="transaction"/>
+					</wizard>
+				</Wizards>
+			</configuration>
+			"""
+    When I optimize "OptEmptyMeta.config"
+    Then "OptEmptyMeta.config.xml" produced in data:
+    And "OptEmptyMeta.config.xml" contains 1 wizards with stages="Stage2" and meta="all;T1"

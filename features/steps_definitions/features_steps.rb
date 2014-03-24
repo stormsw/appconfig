@@ -4,24 +4,22 @@ require 'aruba/api'
 #require 'aruba/reporting'
 #World(Aruba::Api)
 
+def read_appconfig_xml(filename)
+  doc = Nokogiri::XML(File.open('tmp/'+filename)) do |config|
+    # NOBLANKS - Remove blank nodes
+    # NOENT - Substitute entities
+    # NOERROR - Suppress error reports
+    # STRICT - Strict parsing; raise an error when parsing malformed documents
+    # NONET - Prevent any network connections during parsing. Recommended for parsing untrusted documents.
+    config.strict.nonet
+  end
+end
+
+
 Given(/^I have "(.*?)" in data:$/) do |filename, xml|
   @filename = "tmp/"+filename
   #STDERR.puts @filename
   File.open(@filename, 'w') { |f| f.write(xml) }
-end
-
-When(/^I normalize "(.*?)"$/) do |filename|
-  #aruba makes current working dir tmp/aruba...
-  case platform
-    when :windows
-      cmd = 'appconfig.cmd normalize ../'+filename
-    when :linux
-      cmd = 'appconfig normalize ../'+filename
-    else
-      raise "Unknown platform, barely know what to do there?!"
-  end
-  run_simple(unescape(cmd),false ) #need to investigate why, but windows version of childprocess raises exception
-  #assert_exit_status(0)
 end
 
 Then(/^"(.*?)" produced in data:$/) do |filename|
@@ -49,35 +47,10 @@ Then(/^"(.*?)" contains (\d+) wizards with transaction in "(.*?)"$/) do |filenam
   end
 end
 
-When(/^I optimize "(.*?)"$/) do |filename|
-  #aruba makes current working dir tmp/aruba...
-  case platform
-    when :windows
-      cmd = 'appconfig.cmd optimize ../'+filename
-    when :linux
-      cmd = 'appconfig optimize ../'+filename
-    else
-      raise "Unknown platform, barely know what to do there?!"
-  end
-  run_simple(unescape(cmd),false) #windows version fails 
-  #assert_exit_status(0)
-end
-
 When(/^I check workers in "(.*?)"$/) do |filename|
   pending # express the regexp above with the code you wish you had
 end
 
-When(/^I normalize with sorting "(.*?)"$/) do |filename|
-  case platform
-    when :windows
-      cmd = "appconfig.cmd normalize ../#{filename} -s"
-    when :linux
-      cmd = "appconfig normalize ../#{filename} -s"
-    else
-      raise "Unknown platform, barely know what to do there?!"
-  end
-  run_simple(unescape(cmd),false )
-end
 
 Then(/^"(.*?)" contains (\d+) wizards with stage order "(.*?)" and code order "(.*?)"$/) do |filename, wcount, wstages, wcodes|
   doc = read_appconfig_xml(filename)
@@ -93,16 +66,6 @@ Then(/^"(.*?)" contains (\d+) wizards with stage order "(.*?)" and code order "(
   codes.join(',').should==wcodes
 end
 
-def read_appconfig_xml(filename)
-  doc = Nokogiri::XML(File.open('tmp/'+filename)) do |config|
-    # NOBLANKS - Remove blank nodes
-    # NOENT - Substitute entities
-    # NOERROR - Suppress error reports
-    # STRICT - Strict parsing; raise an error when parsing malformed documents
-    # NONET - Prevent any network connections during parsing. Recommended for parsing untrusted documents.
-    config.strict.nonet
-  end
-end
 
 Then(/^"(.*?)" contains (\d+) wizards with stages="(.*?)" and meta="(.*?)"$/) do |filename, wcount, wstages, wcodes|
   doc = read_appconfig_xml(filename)
