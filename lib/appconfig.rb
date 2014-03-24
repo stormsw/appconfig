@@ -50,9 +50,22 @@ module Appconfig
       editors_cache = Hash.new { |k, v| k[v]={} }
       wizards.each do |wizard|
         stages_csv = wizard[:stages]
+        if stages_csv.nil?
+          wizard.remove
+          next
+          stages_csv=''
+        end
         stages = stages_csv.split(',').uniq
         assembly = wizard[:assembly]
+        if wizard[:meta].nil?
+          wizard.remove
+          next
+          wizard[:meta]=''
+        end
         m_code, tr_csv = wizard[:meta].split(';')
+        if tr_csv.nil?
+          tr_csv = ''
+        end
         wizard_transactions = tr_csv.split(',').uniq
         # should help with specialized meta codes
         transaction_meta[m_code]||=Hash.new { |k, v| k[v]=[] }
@@ -113,9 +126,23 @@ module Appconfig
       #load_meta_data
       wizards.each do |wizard|
         stages_csv = wizard[:stages]
+        if stages_csv.nil?
+          wizard.remove
+          next
+        end
         stages = stages_csv.split(',').uniq
         assembly = wizard[:assembly]
+        if wizard[:meta].nil?
+          wizard.remove
+          next
+          wizard[:meta]=''
+        end
         meta_type_code, tr_csv = wizard[:meta].split(';')
+        if tr_csv.nil?
+          wizard.remove
+          next
+          tr_csv=''
+        end
         wizard_transactions = tr_csv.split(',').uniq
         # should help with specialized meta codes
         #transaction_meta[meta_type_code]||=Hash.new { |k, v| k[v]=[] }
@@ -411,9 +438,17 @@ module Appconfig
 
     #@param wizard [Nokogiri::XML::Node]
     def wizard_to_hash(wizard)
+      wizard[:stages]='' if wizard[:stages].nil?
+      wizard[:meta]='' if wizard[:meta].nil?
       stages_csv = wizard[:stages].split(',').sort.uniq.join(',')
       assembly = wizard[:assembly]
+      if wizard[:meta].nil?
+        wizard[:meta]=''
+      end
       meta_code, tr_csv = wizard[:meta].split(';')
+      if tr_csv.nil?
+        tr_csv=''
+      end
       tr_csv = tr_csv.split(',').sort.uniq.join(',')
       return {:stages => stages_csv, :assembly => assembly, :meta_code => meta_code, :transaction => tr_csv}
     end
@@ -435,81 +470,42 @@ module Appconfig
       meta[all,all]
 
 =end
-  def compare2(a,b)
 
-    stage_a_all = a[:stages]=='all'
-    stage_b_all = b[:stages]=='all'
-
-    meta_a_all = a[:meta_code]=='all'
-    meta_b_all = b[:meta_code]=='all'
-
-    codes_a_all = a[:transaction] == 'all'
-    codes_b_all = b[:transaction] == 'all'
-
-    if(a[:stages]!=b[:stages])
-      return -1 if(stage_a_all&&!stage_b_all)
-      return 1 if(!stage_a_all&&stage_b_all)
-      return a[:stages].to_s <=> b[:stages].to_s
+    #@return 0 if a && b is not all or a==b==all
+    #@param a [Hash]
+    #@param b [Hash]
+    def compare_with_all(a,b)
+      return 1 if (a == "all" && b!="all")
+      return -1 if (a != "all" && b=="all")
+      return 0
     end
-
-    a_type1 = meta_a_all && !codes_a_all
-    b_type1 = meta_b_all && !codes_b_all
-
-    a_type2 = !meta_a_all && !codes_a_all
-    b_type2 = !meta_b_all && !codes_b_all
-
-    a_type3 = !meta_a_all && codes_a_all
-    b_type3 = !meta_b_all && codes_b_all
-
-    a_type4 = meta_a_all && codes_a_all
-    b_type4 = meta_b_all && codes_b_all
-
-    if(a[:meta_code]!=b[:meta_code])
-      return 1 if(a_type1 && !b_type1)
-      return -1 if(!a_type1 && b_type1)
-
-      return 1 if(a_type2 && (b_type3||b_type4))
-      return -1 if(b_type2 && (a_type3||a_type4))
-
-      return 1 if(a_type3 && b_type4)
-      return -1 if(b_type3 && a_type4)
-    end
-
-
-
-    if(a_type1 && b_type1)
-
-    end
-
-    return 1 if(a_type2 && !b_type2)
-    return -1 if(!a_type2 && b_type2)
-
-    return 1 if(a_type3 && !b_type3)
-    return -1 if(!a_type3 && b_type3)
-
-    return 0
-  end
-    # return -1 if a<b |0 if a==b|1 if a>b
+    #@return -1 if a<b |0 if a==b|1 if a>b
     #@param a_wizard [Nokogiri::XML::Node]
     #@param b_wizard [Nokogiri::XML::Node]
     def compare_wizards(a_wizard, b_wizard)
       a = wizard_to_hash(a_wizard)
       b = wizard_to_hash(b_wizard)
       #stages csv gives max  (all=MIN)
-      return -1 if (a[:stages] == "all" && b[:stages]!="all")
-      return 1 if (a[:stages] != "all" && b[:stages]=="all")
+      #return -1 if (a[:stages] == "all" && b[:stages]!="all")
+      #return 1 if (a[:stages] != "all" && b[:stages]=="all")
+      c=compare_with_all(a[:stages],b[:stages])
+      return c unless c==0
       stc = a[:stages].to_s <=> b[:stages].to_s
       return stc if stc!=0
 
       #m_code next (all=MIN)
-      return -1 if (a[:meta_code] == "all" && b[:meta_code]!="all")
-      return 1 if (a[:meta_code] != "all" && b[:meta_code]=="all")
+      #return -1 if (a[:meta_code] == "all" && b[:meta_code]!="all")
+      #return 1 if (a[:meta_code] != "all" && b[:meta_code]=="all")
+      c=compare_with_all(a[:meta_code],b[:meta_code])
+      return c unless c==0
       stc = a[:meta_code].to_i <=> b[:meta_code].to_i
       return stc if stc!=0
 
       #tr_csv
-      return 1 if (a[:transaction] == "all" && b[:transaction]!="all")
-      return -1 if (a[:transaction] != "all" && b[:transaction]=="all")
+      #return 1 if (a[:transaction] == "all" && b[:transaction]!="all")
+      #return -1 if (a[:transaction] != "all" && b[:transaction]=="all")
+      c=compare_with_all(a[:transaction],b[:transaction])
+      return c unless c==0
       stc = a[:transaction].to_s <=> b[:transaction].to_s
       return stc if stc!=0
 
@@ -522,23 +518,6 @@ module Appconfig
 
       doc.search('./wizard').sort{ |a_node, b_node| compare_wizards(a_node, b_node) }.each do |w|
         doc<<w
-      end
-
-    end
-
-    # this one some how cant update cached nodes?!
-    #@param doc [Nokogiri::XML::NodeSet]
-    def sort_wizards1(doc)
-
-      if doc.count>0
-        #doc.remove #unlink from document
-
-        nodes = doc.sort { |a_node, b_node| compare_wizards(a_node, b_node) }.each do |node|
-          node.unlink
-          # node
-        end
-
-        nodes.each { |node| doc << node }
       end
 
     end
