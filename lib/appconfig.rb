@@ -51,20 +51,23 @@ module Appconfig
       wizards.each do |wizard|
         stages_csv = wizard[:stages]
         if stages_csv.nil?
+		  puts "There is found wizard w/o stages attribute declaration line[#{wizard.line}]" if options[:verbose]
           wizard.remove
-          next
-          stages_csv=''
+          next          
         end
         stages = stages_csv.split(',').uniq
         assembly = wizard[:assembly]
         if wizard[:meta].nil?
-          wizard.remove
-          next
-          wizard[:meta]=''
+          puts "There is found wizard w/o meta attribute declaration line[#{wizard.line}]" if options[:verbose]
+		  wizard.remove
+          next          
         end
         m_code, tr_csv = wizard[:meta].split(';')
         if tr_csv.nil?
+		  puts "There is found wizard w/o correct Transaction Codes in meta attribute, check line[#{wizard.line}]" if options[:verbose]
           tr_csv = ''
+		  wizard.remove
+		  next
         end
         wizard_transactions = tr_csv.split(',').uniq
         # should help with specialized meta codes
@@ -127,18 +130,20 @@ module Appconfig
       wizards.each do |wizard|
         stages_csv = wizard[:stages]
         if stages_csv.nil?
+		  puts "There is found wizard w/o stage attribute declaration line[#{wizard.line}]" if options[:verbose]
           wizard.remove
           next
         end
         stages = stages_csv.split(',').uniq
         assembly = wizard[:assembly]
         if wizard[:meta].nil?
+		  puts "There is found wizard w/o meta attribute declaration line[#{wizard.line}]" if options[:verbose]
           wizard.remove
-          next
-          wizard[:meta]=''
+          next          
         end
         meta_type_code, tr_csv = wizard[:meta].split(';')
         if tr_csv.nil?
+		  puts "There is found wizard w/o transaction codes in meta attribute declaration - line[#{wizard.line}]" if options[:verbose]
           wizard.remove
           next
           tr_csv=''
@@ -268,7 +273,7 @@ module Appconfig
           stages = wizard[:stages].split(',')
           meta = wizard[:meta]
           unless meta
-            puts "Analise error: \n #{wizard.to_s}." if options[:verbose]
+            puts "Analyse error: \n #{wizard.to_s}." if options[:verbose]
             #raise "Incorrect meta section (null)"
             next
           end
