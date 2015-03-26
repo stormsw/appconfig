@@ -351,7 +351,7 @@ module Appconfig
     # @param [Hash] known_transaction_stages (cached transaction stages configured)
     # @param [Nokogiri::XML::Node] wizard
     def normalizer_process_stages( trans_code, meta_type_code, normalized_wizards, stage_name, known_transaction_stages, wizard)
-      puts "working out stage #{stage_name}" if options[:verbose]
+      #puts "working out stage #{stage_name}" if options[:verbose]
 
       #'all' as transaction code matches any transaction to this stage
       # So,if there were such stage, wizard will be skipped by app
@@ -361,7 +361,7 @@ module Appconfig
         puts "Warning: override stage #{stage_name} for transaction #{trans_code} by previous 'all'."
       end
 
-      pp known_transaction_stages if options[:verbose]
+      #pp known_transaction_stages if options[:verbose]
       #unless known_transaction_codes[code] && known_transaction_codes[code].any? { |item| item[:assembly]==assembly && item[:code]==meta_type_code }
       #unless known_transaction_stages[trans_code].include?(stage)||skipped_by_all
       unless skipped_by_all || known_transaction_stages[trans_code]&&known_transaction_stages[trans_code].any?{ |item|
@@ -370,7 +370,7 @@ module Appconfig
         #known_transaction_codes[code]<<{:assembly => assembly, :code => meta_type_code}
         known_transaction_stages[trans_code]<<{:stage => stage_name, :code => meta_type_code} #stage
 
-        puts "new wizard!" if options[:verbose]
+        #puts "new wizard!" if options[:verbose]
         #we will not modify there, validation check should be done separately
         #if wizardMetaAccepatable(wizard[:meta],code,getTransactionMetaCode(code))
 
